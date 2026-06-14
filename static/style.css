@@ -1,23 +1,93 @@
+:root {
+    --bfb-rot: #c8102e;
+    --bfb-rot-dunkel: #a10d25;
+    --bfb-dunkel: #1a1a1a;
+}
+
 body {
-    background-color: #f4f5f7;
+    background-color: #ffffff;
+    color: #2b2b2b;
+    font-family: "Helvetica Neue", Arial, "Segoe UI", sans-serif;
 }
-.navbar-brand {
-    letter-spacing: 0.5px;
+
+/* Navbar im klaren, hellen BfB-Look */
+.navbar {
+    background-color: #ffffff !important;
+    border-bottom: 3px solid var(--bfb-rot);
 }
-.list-group-item-warning {
-    border-left: 4px solid #f5a623;
+.navbar .navbar-brand,
+.navbar .nav-link,
+.navbar .navbar-text {
+    color: var(--bfb-dunkel) !important;
 }
-.card {
-    border: none;
-    border-radius: 0.75rem;
-}
-.btn-warning {
-    background-color: #f5a623;
-    border-color: #f5a623;
-    color: #1a1a1a;
+.navbar .nav-link.active {
+    color: var(--bfb-rot) !important;
     font-weight: 600;
 }
-.btn-warning:hover {
-    background-color: #d6901c;
-    border-color: #d6901c;
+.navbar-toggler {
+    border-color: rgba(0,0,0,0.15);
+}
+.navbar-toggler-icon {
+    filter: invert(1);
+}
+
+.navbar-brand {
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+/* Karten */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* Akzentfarbe Rot statt Orange */
+.list-group-item-warning {
+    background-color: #fdecee;
+    border-left: 4px solid var(--bfb-rot);
+}
+
+.btn-warning,
+.btn-primary {
+    background-color: var(--bfb-rot);
+    border-color: var(--bfb-rot);
+    color: #ffffff;
+    font-weight: 600;
+}
+.btn-warning:hover,
+.btn-warning:focus,
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--bfb-rot-dunkel);
+    border-color: var(--bfb-rot-dunkel);
+    color: #ffffff;
+}
+
+.btn-outline-light {
+    color: var(--bfb-dunkel);
+    border-color: var(--bfb-dunkel);
+}
+.btn-outline-light:hover {
+    background-color: var(--bfb-dunkel);
+    color: #ffffff;
+}
+
+a {
+    color: var(--bfb-rot);
+}
+a:hover {
+    color: var(--bfb-rot-dunkel);
+}
+
+.badge.bg-warning {
+    background-color: var(--bfb-rot) !important;
+    color: #ffffff !important;
+}
+
+footer {
+    border-top: 1px solid #eee;
+    margin-top: 2rem;
 }
