@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Auswertung{% endblock %}
+{% block content %}
+<h4 class="mb-3">Auswertung Kran-Nutzung</h4>
+
+<form method="GET" action="{{ url_for('auswertung') }}" class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label">Von</label>
+        <input type="date" name="von" class="form-control" value="{{ von.isoformat() }}">
+    </div>
+    <div class="col-auto">
+        <label class="form-label">Bis</label>
+        <input type="date" name="bis" class="form-control" value="{{ bis.isoformat() }}">
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-warning">Anzeigen</button>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-outline-secondary" href="{{ url_for('auswertung_export', von=von.isoformat(), bis=bis.isoformat()) }}">CSV exportieren</a>
+    </div>
+</form>
+
+{% if not current_user.is_admin() %}
+<p class="text-muted">Es wird nur deine eigene Kran-Nutzung angezeigt.</p>
+{% endif %}
+
+<div class="table-responsive">
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Firma</th>
+            <th>Name</th>
+            <th>Anzahl Buchungen</th>
+            <th>Gesamtstunden</th>
+            <th>Anteil</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for e in ergebnisse %}
+        <tr>
+            <td>{{ e.firma }}</td>
+            <td>{{ e.name }}</td>
+            <td>{{ e.anzahl }}</td>
+            <td>{{ '%.2f'|format(e.stunden) }}</td>
+            <td>
+                {% if gesamt_stunden > 0 %}
+                    {{ '%.1f'|format(e.stunden / gesamt_stunden * 100) }} %
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="text-muted">Keine Buchungen im gewählten Zeitraum.</td></tr>
+        {% endfor %}
+    </tbody>
+    {% if ergebnisse %}
+    <tfoot>
+        <tr class="fw-bold">
+            <td colspan="2">Gesamt</td>
+            <td>{{ gesamt_buchungen }}</td>
+            <td>{{ '%.2f'|format(gesamt_stunden) }}</td>
+            <td>100 %</td>
+        </tr>
+    </tfoot>
+    {% endif %}
+</table>
+</div>
+
+<p class="text-muted small">
+    Zeitraum: {{ von.strftime('%d.%m.%Y') }} – {{ bis.strftime('%d.%m.%Y') }}
+</p>
+{% endblock %}

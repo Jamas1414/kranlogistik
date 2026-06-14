@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Registrieren{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-3 text-center">Konto erstellen</h3>
+                <p class="text-muted small text-center">
+                    Externe Firmen registrieren sich hier. Nach der Registrierung muss ein Administrator
+                    das Konto freischalten, bevor Kran-Slots gebucht werden können.
+                </p>
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Firma</label>
+                        <input type="text" name="firma" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Name (Ansprechperson)</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">E-Mail</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Passwort</label>
+                            <input type="password" name="password" class="form-control" required minlength="6">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Passwort wiederholen</label>
+                            <input type="password" name="password2" class="form-control" required minlength="6">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">Registrieren</button>
+                </form>
+                <hr>
+                <p class="text-center mb-0">Bereits ein Konto? <a href="{{ url_for('login') }}">Einloggen</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

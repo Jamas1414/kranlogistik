@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Kalender{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="btn-group">
+        <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=vorheriger_tag.isoformat()) }}">&laquo; Vorheriger Tag</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=naechster_tag.isoformat()) }}">Nächster Tag &raquo;</a>
+    </div>
+    <form method="GET" action="{{ url_for('kalender') }}" class="d-flex gap-2">
+        <input type="date" name="datum" class="form-control" value="{{ ausgewaehlter_tag.isoformat() }}">
+        <button type="submit" class="btn btn-warning">Anzeigen</button>
+    </form>
+</div>
+
+<h4 class="mb-3">Kranbelegung am {{ ausgewaehlter_tag.strftime('%A, %d.%m.%Y') }}</h4>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="list-group mb-4">
+            {% for slot in slots %}
+            <div class="list-group-item d-flex justify-content-between align-items-center {% if slot.belegt %}{% if slot.ist_eigene %}list-group-item-warning{% else %}list-group-item-light{% endif %}{% endif %}">
+                <div>
+                    <strong>{{ slot.start.strftime('%H:%M') }} – {{ slot.end.strftime('%H:%M') }}</strong>
+                    {% if slot.belegt %}
+                        <br>
+                        <span class="text-muted small">
+                            Reserviert von {{ slot.booking.user.firma }} ({{ slot.booking.user.name }})
+                            {% if slot.booking.bemerkung %} – {{ slot.booking.bemerkung }}{% endif %}
+                        </span>
+                    {% else %}
+                        <br><span class="badge bg-success">frei</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if slot.belegt %}
+                        {% if slot.ist_eigene or current_user.is_admin() %}
+                        <form method="POST" action="{{ url_for('buchung_loeschen', booking_id=slot.booking.id) }}" onsubmit="return confirm('Buchung wirklich stornieren?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
+                        </form>
+                        {% endif %}
+                    {% else %}
+                        <button type="button" class="btn btn-sm btn-warning"
+                                onclick="reservieren('{{ slot.start.strftime('%H:%M') }}', '{{ slot.end.strftime('%H:%M') }}')">
+                            Reservieren
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Kran reservieren</h5>
+                <form method="POST" action="{{ url_for('buchen') }}">
+                    <input type="hidden" name="datum" value="{{ ausgewaehlter_tag.isoformat() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Datum</label>
+                        <input type="text" class="form-control" value="{{ ausgewaehlter_tag.strftime('%d.%m.%Y') }}" disabled>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Von</label>
+                            <input type="time" name="start" id="start" class="form-control" min="06:00" max="18:00" step="1800" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Bis</label>
+                            <input type="time" name="end" id="end" class="form-control" min="06:00" max="18:00" step="1800" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bemerkung (optional)</label>
+                        <input type="text" name="bemerkung" class="form-control" placeholder="z.B. Materiallieferung Halle B">
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">Slot reservieren</button>
+                </form>
+                <p class="text-muted small mt-3 mb-0">
+                    Betriebszeiten des Krans: 06:00 – 18:00 Uhr. Slots sind standardmässig 60 Minuten lang,
+                    es können aber beliebige Zeitfenster innerhalb der Betriebszeiten gewählt werden,
+                    solange sie sich nicht mit bestehenden Buchungen überschneiden.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function reservieren(start, end) {
+    document.getElementById('start').value = start;
+    document.getElementById('end').value = end;
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+}
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Meine Buchungen{% endblock %}
+{% block content %}
+<h4 class="mb-3">Meine Buchungen</h4>
+
+{% if buchungen %}
+<div class="table-responsive">
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Datum</th>
+            <th>Von</th>
+            <th>Bis</th>
+            <th>Dauer (h)</th>
+            <th>Bemerkung</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for b in buchungen %}
+        <tr>
+            <td>{{ b.datum.strftime('%d.%m.%Y') }}</td>
+            <td>{{ b.start_zeit.strftime('%H:%M') }}</td>
+            <td>{{ b.end_zeit.strftime('%H:%M') }}</td>
+            <td>{{ b.dauer_stunden }}</td>
+            <td>{{ b.bemerkung or '' }}</td>
+            <td>
+                <form method="POST" action="{{ url_for('buchung_loeschen', booking_id=b.id) }}" onsubmit="return confirm('Buchung wirklich stornieren?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-muted">Du hast noch keine Kranbuchungen.</p>
+{% endif %}
+
+<a href="{{ url_for('kalender') }}" class="btn btn-warning">Neue Buchung</a>
+{% endblock %}

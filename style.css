@@ -1,0 +1,23 @@
+body {
+    background-color: #f4f5f7;
+}
+.navbar-brand {
+    letter-spacing: 0.5px;
+}
+.list-group-item-warning {
+    border-left: 4px solid #f5a623;
+}
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+.btn-warning {
+    background-color: #f5a623;
+    border-color: #f5a623;
+    color: #1a1a1a;
+    font-weight: 600;
+}
+.btn-warning:hover {
+    background-color: #d6901c;
+    border-color: #d6901c;
+}

@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Administration{% endblock %}
+{% block content %}
+<h4 class="mb-3">Benutzerverwaltung</h4>
+
+<div class="table-responsive">
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Firma</th>
+            <th>Name</th>
+            <th>E-Mail</th>
+            <th>Rolle</th>
+            <th>Status</th>
+            <th>Registriert am</th>
+            <th>Aktionen</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.firma }}</td>
+            <td>{{ u.name }}</td>
+            <td>{{ u.email }}</td>
+            <td>
+                {% if u.role == 'admin' %}
+                    <span class="badge bg-warning text-dark">Admin</span>
+                {% else %}
+                    <span class="badge bg-secondary">Extern</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if u.active %}
+                    <span class="badge bg-success">aktiv</span>
+                {% else %}
+                    <span class="badge bg-danger">gesperrt</span>
+                {% endif %}
+            </td>
+            <td>{{ u.created_at.strftime('%d.%m.%Y') }}</td>
+            <td class="d-flex gap-1 flex-wrap">
+                <form method="POST" action="{{ url_for('admin_toggle_active', user_id=u.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-{{ 'danger' if u.active else 'success' }}">
+                        {{ 'Sperren' if u.active else 'Freischalten' }}
+                    </button>
+                </form>
+                {% if u.id != current_user.id %}
+                <form method="POST" action="{{ url_for('admin_toggle_admin', user_id=u.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        {{ 'Admin entziehen' if u.role == 'admin' else 'Zu Admin machen' }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('admin_user_loeschen', user_id=u.id) }}" onsubmit="return confirm('Benutzer {{ u.name }} und alle seine Buchungen wirklich löschen?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Löschen</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
