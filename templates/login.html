@@ -2,23 +2,31 @@
 {% block title %}Login{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card shadow-sm">
-            <div class="card-body p-4">
-                <h3 class="card-title mb-3 text-center">Anmelden</h3>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">E-Mail</label>
-                        <input type="email" name="email" class="form-control" required autofocus>
+    <div class="col-md-8">
+        <div class="card shadow-sm overflow-hidden">
+            <div class="row g-0">
+                <div class="col-md-6 d-none d-md-block">
+                    <img src="{{ url_for('static', filename='projekt.jpg') }}" alt="Projekt" class="w-100 h-100" style="object-fit: cover;">
+                </div>
+                <div class="col-md-6">
+                    <div class="card-body p-4">
+                        <h3 class="card-title mb-3 text-center">Anmelden</h3>
+                        <form method="POST">
+                            <div class="mb-3">
+                                <label class="form-label">E-Mail</label>
+                                <input type="email" name="email" class="form-control" required autofocus>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Passwort</label>
+                                <input type="password" name="password" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100">Einloggen</button>
+                        </form>
+                        <hr>
+                        <p class="text-center mb-0">Noch kein Konto? <a href="{{ url_for('register') }}">Registrieren</a></p>
+                        <p class="text-center text-muted small mt-2">Passwort vergessen? Bitte einen Administrator kontaktieren – er kann dir im Admin-Bereich ein neues Passwort setzen.</p>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Passwort</label>
-                        <input type="password" name="password" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100">Einloggen</button>
-                </form>
-                <hr>
-                <p class="text-center mb-0">Noch kein Konto? <a href="{{ url_for('register') }}">Registrieren</a></p>
+                </div>
             </div>
         </div>
     </div>
