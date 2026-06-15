@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Parkplatz-Prüfung{% endblock %}
+{% block content %}
+<h4 class="mb-3">Parkplatz-Prüfung</h4>
+<p class="text-muted">
+    Kontrollschild eingeben – die Prüfung erfolgt sofort und zeigt an, ob für das gewählte Datum
+    ein gültiges Tagesticket gelöst wurde.
+</p>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Datum</label>
+                    <input type="date" id="pruef-datum" class="form-control" value="{{ datum.isoformat() }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Kontrollschild</label>
+                    <input type="text" id="pruef-kennzeichen" class="form-control form-control-lg text-uppercase"
+                           placeholder="z.B. LU 123456" autofocus autocomplete="off" style="letter-spacing: 2px;">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Kontrollschild fotografieren (optional)</label>
+                    <input type="file" id="pruef-foto" class="form-control" accept="image/*" capture="environment">
+                    <div class="form-text">
+                        Das Foto dient nur als Beleg/Erinnerung. Für die automatische Prüfung muss das
+                        Kontrollschild oben eingetippt werden.
+                    </div>
+                </div>
+                <div id="pruef-ergebnis" class="alert alert-light border mb-0">
+                    Bitte Kontrollschild eingeben.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('parkplatz_pruefung') }}" class="row g-2 align-items-end mb-3" id="datum-form">
+                    <div class="col-auto">
+                        <label class="form-label">Übersicht für Datum</label>
+                        <input type="date" name="datum" class="form-control" value="{{ datum.isoformat() }}">
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-secondary">Anzeigen</button>
+                    </div>
+                </form>
+
+                <h5 class="card-title">Gelöste Tickets am {{ datum.strftime('%d.%m.%Y') }}</h5>
+                {% if tickets_heute %}
+                <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Kontrollschild</th>
+                            <th>Firma</th>
+                            <th>Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tickets_heute %}
+                        <tr>
+                            <td>{{ t.kennzeichen }}</td>
+                            <td>{{ t.user.firma }}</td>
+                            <td>{{ t.user.name }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Für dieses Datum wurden noch keine Tickets gelöst.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const kennzeichenInput = document.getElementById('pruef-kennzeichen');
+const datumInput = document.getElementById('pruef-datum');
+const ergebnis = document.getElementById('pruef-ergebnis');
+
+async function pruefen() {
+    const kennzeichen = kennzeichenInput.value.trim();
+    const datum = datumInput.value;
+
+    if (!kennzeichen) {
+        ergebnis.className = 'alert alert-light border mb-0';
+        ergebnis.textContent = 'Bitte Kontrollschild eingeben.';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/parkplatz/check?kennzeichen=' + encodeURIComponent(kennzeichen) + '&datum=' + encodeURIComponent(datum));
+        const data = await res.json();
+
+        if (data.gefunden) {
+            ergebnis.className = 'alert alert-success mb-0';
+            ergebnis.innerHTML = '✅ Gültiges Parkticket gefunden<br>' +
+                '<strong>' + data.kennzeichen + '</strong> – ' + data.firma + ' (' + data.name + ')<br>' +
+                'Datum: ' + data.datum;
+        } else {
+            ergebnis.className = 'alert alert-danger mb-0';
+            ergebnis.innerHTML = '❌ Kein Parkticket für <strong>' + (data.kennzeichen || kennzeichen.toUpperCase()) +
+                '</strong> am ' + (data.datum || datum) + ' gefunden.';
+        }
+    } catch (e) {
+        ergebnis.className = 'alert alert-danger mb-0';
+        ergebnis.textContent = 'Fehler bei der Prüfung.';
+    }
+}
+
+kennzeichenInput.addEventListener('input', () => {
+    kennzeichenInput.value = kennzeichenInput.value.toUpperCase();
+    pruefen();
+});
+datumInput.addEventListener('change', pruefen);
+</script>
+{% endblock %}
