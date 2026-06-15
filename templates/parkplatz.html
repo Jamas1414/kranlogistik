@@ -1,94 +1,68 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block title %}Parkplatz{% endblock %}
 {% block content %}
+
 <h4 class="mb-3">Parkplatzmanagement</h4>
-<p class="text-muted">Hier kannst du für deine Fahrzeuge ein Tagesticket zum Parkieren auf der Baustelle lösen.</p>
 
-<div class="row g-4">
-    <div class="col-lg-5">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Tagesticket lösen</h5>
-                <form method="POST" action="{{ url_for('parkplatz') }}">
-                    <div class="mb-3">
-                        <label class="form-label">Kontrollschild</label>
-                        <input type="text" name="kennzeichen" class="form-control text-uppercase" placeholder="z.B. LU 123456" required style="letter-spacing: 1px;">
-                        <div class="form-text">Schweizer Kontrollschild eingeben, z.B. LU 123456.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Datum</label>
-                        <input type="date" name="datum" class="form-control" value="{{ heute.isoformat() }}" required>
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100">Tagesticket lösen</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-7">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Meine Parktickets</h5>
-                {% if eigene_tickets %}
-                <div class="table-responsive">
-                <table class="table table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>Datum</th>
-                            <th>Kontrollschild</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for t in eigene_tickets %}
-                        <tr>
-                            <td>{{ t.datum.strftime('%d.%m.%Y') }}</td>
-                            <td>{{ t.kennzeichen }}</td>
-                            <td>
-                                <form method="POST" action="{{ url_for('parkplatz_loeschen', ticket_id=t.id) }}" onsubmit="return confirm('Parkticket wirklich stornieren?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+<div class="card mb-4">
+    <div class="card-header">Tagesticket loesen</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('parkplatz') }}">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Kontrollschild</label>
+                    <input type="text" name="kennzeichen" class="form-control" placeholder="z.B. BE 123456" required>
                 </div>
-                {% else %}
-                <p class="text-muted">Du hast noch keine Parktickets gelöst.</p>
-                {% endif %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Von</label>
+                    <input type="date" name="von" class="form-control" value="{{ heute.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Bis (optional, fuer mehrere Tage)</label>
+                    <input type="date" name="bis" class="form-control">
+                </div>
             </div>
-        </div>
-
-        {% if tage_pro_kennzeichen %}
-        <div class="card shadow-sm mt-4">
-            <div class="card-body">
-                <h5 class="card-title">Auswertung – gelöste Parktage</h5>
-                <table class="table table-sm align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Kontrollschild</th>
-                            <th>Anzahl Tage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for kennzeichen, anzahl in tage_pro_kennzeichen.items() %}
-                        <tr>
-                            <td>{{ kennzeichen }}</td>
-                            <td>{{ anzahl }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="fw-bold">
-                            <td>Total</td>
-                            <td>{{ gesamt_tage }}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-        {% endif %}
+            <button type="submit" class="btn btn-danger">Ticket(s) loesen</button>
+        </form>
     </div>
 </div>
+
+<div class="card mb-4">
+    <div class="card-header">Verfuegbarkeit naechste 14 Tage (max. {{ max_parkplaetze }} Plaetze pro Tag)</div>
+    <ul class="list-group list-group-flush">
+        {% for tag in vorschau %}
+        <li class="list-group-item d-flex justify-content-between align-items-center {% if tag.voll %}list-group-item-danger{% elif tag.frei <= 5 %}list-group-item-warning{% else %}list-group-item-success{% endif %}">
+            <span>{{ tag.datum.strftime('%d.%m.%Y') }}</span>
+            <span>
+                {% if tag.voll %}
+                    <span class="belegung-status belegt">Ausgebucht</span>
+                {% else %}
+                    <span class="belegung-status frei">{{ tag.frei }} von {{ max_parkplaetze }} frei</span>
+                {% endif %}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<div class="card">
+    <div class="card-header">Meine Tickets ({{ gesamt_tage }} Tage gesamt)</div>
+    <ul class="list-group list-group-flush">
+        {% for ticket in eigene_tickets %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ ticket.kennzeichen }}</strong>
+                &mdash; {{ ticket.datum.strftime('%d.%m.%Y') }}
+                <span class="text-muted small">({{ tage_pro_kennzeichen[ticket.kennzeichen] }} Tage gesamt)</span>
+            </div>
+            <form method="POST" action="{{ url_for('parkplatz_loeschen', ticket_id=ticket.id) }}" onsubmit="return confirm('Ticket wirklich stornieren?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
+            </form>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">Noch keine Tickets geloest.</li>
+        {% endfor %}
+    </ul>
+</div>
+
 {% endblock %}
