@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#f5a623">
+    <meta name="theme-color" content="#ffffff">
     <link rel="manifest" href="{{ url_for('manifest') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
     <title>{% block title %}Kranlogistik{% endblock %} - Baustellenlogistik</title>
@@ -11,7 +11,7 @@
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container">
         <a class="navbar-brand fw-bold" href="{{ url_for('kalender') if current_user.is_authenticated else url_for('login') }}">
             🏗️ Kranlogistik
@@ -31,15 +31,18 @@
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'auswertung' %}active{% endif %}" href="{{ url_for('auswertung') }}">Auswertung</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'anfahrt' %}active{% endif %}" href="{{ url_for('anfahrt') }}">Anfahrt</a>
+                </li>
                 {% if current_user.is_admin() %}
                 <li class="nav-item">
                     <a class="nav-link {% if request.endpoint == 'admin' %}active{% endif %}" href="{{ url_for('admin') }}">Administration</a>
                 </li>
                 {% endif %}
             </ul>
-            <span class="navbar-text text-light me-3">
+            <span class="navbar-text me-3">
                 {{ current_user.name }} ({{ current_user.firma }})
-                {% if current_user.is_admin() %}<span class="badge bg-warning text-dark">Admin</span>{% endif %}
+                {% if current_user.is_admin() %}<span class="badge bg-warning">Admin</span>{% endif %}
             </span>
             <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">Logout</a>
             {% endif %}
