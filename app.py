@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time, timedelta
 
 from flask import Flask, render_template, redirect, url_for, request, flash, Response
 from flask_sqlalchemy import SQLAlchemy
@@ -55,6 +55,8 @@ class Booking(db.Model):
     start_zeit = db.Column(db.Time, nullable=False)
     end_zeit = db.Column(db.Time, nullable=False)
     bemerkung = db.Column(db.String(255))
+    buchungsart = db.Column(db.String(20), nullable=False, default='individuell')
+    preis = db.Column(db.Float, nullable=False, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @property
@@ -92,6 +94,44 @@ def generate_day_slots(day):
 
 def overlaps(start1, end1, start2, end2):
     return start1 < end2 and start2 < end1
+
+
+# ---------------------------------------------------------------------------
+# Abrechnung Kran-Nutzung
+# ---------------------------------------------------------------------------
+
+STUNDENSATZ = 250.0  # CHF pro Kranstunde (für Zeitbuchungen)
+MITTAGSPAUSE_START = time(12, 0)
+MITTAGSPAUSE_ENDE = time(13, 0)
+
+# Feste Buchungsarten: Dauer in Minuten (None = frei wählbar) und Pauschalpreis (None = nach Stundensatz)
+BUCHUNGSARTEN = {
+    'kranzug':    {'label': 'Einzelner Kranzug (10 Min.)',            'dauer_minuten': 10,  'preis': 100.0},
+    'stunde':     {'label': 'Eine Kranstunde (60 Min.)',              'dauer_minuten': 60,  'preis': 250.0},
+    'halbtag':    {'label': 'Halber Tag (4.5 Std.)',                  'dauer_minuten': 270, 'preis': 1125.0},
+    'tag':        {'label': 'Ganzer Arbeitstag (07:00–12:00 / 13:00–17:00)', 'dauer_minuten': 600, 'preis': 2250.0},
+    'individuell': {'label': 'Individuell (Zeit frei wählbar, 10-Minuten-Schritte)', 'dauer_minuten': None, 'preis': None},
+}
+
+
+def berechne_preis(buchungsart, start_zeit, end_zeit):
+    """Berechnet den zu bezahlenden Preis für eine Buchung."""
+    info = BUCHUNGSARTEN.get(buchungsart)
+    if info and info['preis'] is not None:
+        return info['preis']
+
+    # Individuelle Buchung: nach Stundensatz, Mittagspause 12-13 Uhr wird nicht verrechnet
+    referenz = date.today()
+    start_dt = datetime.combine(referenz, start_zeit)
+    end_dt = datetime.combine(referenz, end_zeit)
+    minuten = (end_dt - start_dt).total_seconds() / 60
+
+    pause_start = datetime.combine(referenz, MITTAGSPAUSE_START)
+    pause_ende = datetime.combine(referenz, MITTAGSPAUSE_ENDE)
+    overlap_minuten = max(0, (min(end_dt, pause_ende) - max(start_dt, pause_start)).total_seconds() / 60)
+    minuten -= overlap_minuten
+
+    return round(max(0, minuten) / 60 * STUNDENSATZ, 2)
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +262,10 @@ def kalender():
         vorheriger_tag=vorheriger_tag,
         naechster_tag=naechster_tag,
         slots=slots,
+        buchungsarten=BUCHUNGSARTEN,
+        stundensatz=STUNDENSATZ,
+        slot_start_hour=SLOT_START_HOUR,
+        slot_end_hour=SLOT_END_HOUR,
     )
 
 
@@ -230,16 +274,32 @@ def kalender():
 def buchen():
     datum_str = request.form['datum']
     start_str = request.form['start']
-    end_str = request.form['end']
+    buchungsart = request.form.get('buchungsart', 'individuell')
     bemerkung = request.form.get('bemerkung', '').strip()
+
+    if buchungsart not in BUCHUNGSARTEN:
+        flash('Ungültige Buchungsart.', 'danger')
+        return redirect(url_for('kalender', datum=datum_str))
 
     try:
         datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
         start_zeit = datetime.strptime(start_str, '%H:%M').time()
-        end_zeit = datetime.strptime(end_str, '%H:%M').time()
     except ValueError:
         flash('Ungültige Datums- oder Zeitangabe.', 'danger')
-        return redirect(url_for('kalender'))
+        return redirect(url_for('kalender', datum=datum_str))
+
+    info = BUCHUNGSARTEN[buchungsart]
+    if info['dauer_minuten'] is not None:
+        # Feste Buchungsart: Endzeit ergibt sich aus der Dauer
+        end_dt = datetime.combine(datum, start_zeit) + timedelta(minutes=info['dauer_minuten'])
+        end_zeit = end_dt.time()
+    else:
+        end_str = request.form.get('end', '')
+        try:
+            end_zeit = datetime.strptime(end_str, '%H:%M').time()
+        except ValueError:
+            flash('Ungültige Endzeit.', 'danger')
+            return redirect(url_for('kalender', datum=datum_str))
 
     if datum < date.today():
         flash('Buchungen in der Vergangenheit sind nicht möglich.', 'danger')
@@ -249,6 +309,10 @@ def buchen():
         flash('Die Startzeit muss vor der Endzeit liegen.', 'danger')
         return redirect(url_for('kalender', datum=datum_str))
 
+    if start_zeit < time(SLOT_START_HOUR, 0) or end_zeit > time(SLOT_END_HOUR, 0):
+        flash(f'Buchungen sind nur zwischen {SLOT_START_HOUR:02d}:00 und {SLOT_END_HOUR:02d}:00 Uhr möglich.', 'danger')
+        return redirect(url_for('kalender', datum=datum_str))
+
     # Kollisionsprüfung
     bestehende = Booking.query.filter_by(datum=datum).all()
     for b in bestehende:
@@ -256,16 +320,24 @@ def buchen():
             flash('Dieser Zeitraum ist bereits belegt. Bitte einen anderen Slot wählen.', 'danger')
             return redirect(url_for('kalender', datum=datum_str))
 
+    preis = berechne_preis(buchungsart, start_zeit, end_zeit)
+
     booking = Booking(
         user_id=current_user.id,
         datum=datum,
         start_zeit=start_zeit,
         end_zeit=end_zeit,
         bemerkung=bemerkung,
+        buchungsart=buchungsart,
+        preis=preis,
     )
     db.session.add(booking)
     db.session.commit()
-    flash(f'Kran erfolgreich reserviert: {datum.strftime("%d.%m.%Y")} von {start_zeit.strftime("%H:%M")} bis {end_zeit.strftime("%H:%M")}.', 'success')
+    flash(
+        f'Kran erfolgreich reserviert: {datum.strftime("%d.%m.%Y")} von {start_zeit.strftime("%H:%M")} '
+        f'bis {end_zeit.strftime("%H:%M")} ({info["label"]}). Preis: CHF {preis:.2f}',
+        'success'
+    )
     return redirect(url_for('kalender', datum=datum_str))
 
 
@@ -285,6 +357,17 @@ def buchung_loeschen(booking_id):
 
 
 # ---------------------------------------------------------------------------
+# Routen: Anfahrt
+# ---------------------------------------------------------------------------
+
+@app.route('/anfahrt')
+@login_required
+def anfahrt():
+    plan_pfad = os.path.join(basedir, 'static', 'installationsplan.jpg')
+    return render_template('anfahrt.html', installationsplan_vorhanden=os.path.isfile(plan_pfad))
+
+
+# ---------------------------------------------------------------------------
 # Routen: Meine Buchungen
 # ---------------------------------------------------------------------------
 
@@ -292,7 +375,7 @@ def buchung_loeschen(booking_id):
 @login_required
 def meine_buchungen():
     buchungen = Booking.query.filter_by(user_id=current_user.id).order_by(Booking.datum.desc(), Booking.start_zeit).all()
-    return render_template('meine_buchungen.html', buchungen=buchungen)
+    return render_template('meine_buchungen.html', buchungen=buchungen, buchungsarten=BUCHUNGSARTEN)
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +426,25 @@ def admin_toggle_admin(user_id):
     user.role = 'extern' if user.role == 'admin' else 'admin'
     db.session.commit()
     flash(f'Rolle von {user.name} ({user.firma}) wurde geändert auf "{user.role}".', 'success')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/passwort-zuruecksetzen', methods=['POST'])
+@login_required
+def admin_reset_password(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    user = User.query.get_or_404(user_id)
+    neues_passwort = request.form.get('neues_passwort', '').strip()
+
+    if len(neues_passwort) < 6:
+        flash('Das neue Passwort muss mindestens 6 Zeichen lang sein.', 'danger')
+        return redirect(url_for('admin'))
+
+    user.set_password(neues_passwort)
+    db.session.commit()
+    flash(f'Passwort für {user.name} ({user.firma}) wurde zurückgesetzt.', 'success')
     return redirect(url_for('admin'))
 
 
@@ -402,13 +504,16 @@ def auswertung():
                 'firma': b.user.firma,
                 'anzahl': 0,
                 'stunden': 0.0,
+                'betrag': 0.0,
             }
         auswertung_pro_user[key]['anzahl'] += 1
         auswertung_pro_user[key]['stunden'] += b.dauer_stunden
+        auswertung_pro_user[key]['betrag'] += b.preis
 
-    ergebnisse = sorted(auswertung_pro_user.values(), key=lambda x: x['stunden'], reverse=True)
+    ergebnisse = sorted(auswertung_pro_user.values(), key=lambda x: x['betrag'], reverse=True)
     gesamt_stunden = sum(e['stunden'] for e in ergebnisse)
     gesamt_buchungen = sum(e['anzahl'] for e in ergebnisse)
+    gesamt_betrag = sum(e['betrag'] for e in ergebnisse)
 
     return render_template(
         'auswertung.html',
@@ -417,6 +522,7 @@ def auswertung():
         bis=bis,
         gesamt_stunden=gesamt_stunden,
         gesamt_buchungen=gesamt_buchungen,
+        gesamt_betrag=gesamt_betrag,
     )
 
 
@@ -436,13 +542,17 @@ def auswertung_export():
 
     buchungen = query.order_by(Booking.datum, Booking.start_zeit).all()
 
-    zeilen = ['Datum;Firma;Name;Start;Ende;Dauer (h);Bemerkung']
+    zeilen = ['Datum;Firma;Name;Start;Ende;Dauer (h);Buchungsart;Preis (CHF);Bemerkung']
+    gesamt_betrag = 0.0
     for b in buchungen:
+        gesamt_betrag += b.preis
+        art = BUCHUNGSARTEN.get(b.buchungsart, {}).get('label', b.buchungsart)
         zeilen.append(
             f'{b.datum.strftime("%d.%m.%Y")};{b.user.firma};{b.user.name};'
             f'{b.start_zeit.strftime("%H:%M")};{b.end_zeit.strftime("%H:%M")};'
-            f'{b.dauer_stunden};{b.bemerkung or ""}'
+            f'{b.dauer_stunden};{art};{b.preis:.2f};{b.bemerkung or ""}'
         )
+    zeilen.append(f';;;;;;;{gesamt_betrag:.2f};Gesamtbetrag')
 
     csv_data = '\n'.join(zeilen)
     return Response(
@@ -464,7 +574,7 @@ def manifest():
         "start_url": "/",
         "display": "standalone",
         "background_color": "#ffffff",
-        "theme_color": "#f5a623",
+        "theme_color": "#ffffff",
         "icons": [
             {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
             {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
