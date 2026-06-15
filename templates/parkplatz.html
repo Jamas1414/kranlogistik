@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Parkplatz{% endblock %}
+{% block content %}
+<h4 class="mb-3">Parkplatzmanagement</h4>
+<p class="text-muted">Hier kannst du für deine Fahrzeuge ein Tagesticket zum Parkieren auf der Baustelle lösen.</p>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Tagesticket lösen</h5>
+                <form method="POST" action="{{ url_for('parkplatz') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Kontrollschild</label>
+                        <input type="text" name="kennzeichen" class="form-control text-uppercase" placeholder="z.B. LU 123456" required style="letter-spacing: 1px;">
+                        <div class="form-text">Schweizer Kontrollschild eingeben, z.B. LU 123456.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Datum</label>
+                        <input type="date" name="datum" class="form-control" value="{{ heute.isoformat() }}" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">Tagesticket lösen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Meine Parktickets</h5>
+                {% if eigene_tickets %}
+                <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Kontrollschild</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in eigene_tickets %}
+                        <tr>
+                            <td>{{ t.datum.strftime('%d.%m.%Y') }}</td>
+                            <td>{{ t.kennzeichen }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('parkplatz_loeschen', ticket_id=t.id) }}" onsubmit="return confirm('Parkticket wirklich stornieren?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% else %}
+                <p class="text-muted">Du hast noch keine Parktickets gelöst.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if tage_pro_kennzeichen %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Auswertung – gelöste Parktage</h5>
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Kontrollschild</th>
+                            <th>Anzahl Tage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kennzeichen, anzahl in tage_pro_kennzeichen.items() %}
+                        <tr>
+                            <td>{{ kennzeichen }}</td>
+                            <td>{{ anzahl }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td>Total</td>
+                            <td>{{ gesamt_tage }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
