@@ -179,6 +179,9 @@ BUCHUNGSARTEN = {
 }
 
 
+MAX_PARKPLAETZE = 25
+
+
 def berechne_preis(buchungsart, start_zeit, end_zeit):
     info = BUCHUNGSARTEN.get(buchungsart)
     if info and info['preis'] is not None:
@@ -473,7 +476,8 @@ def meine_buchungen():
 def parkplatz():
     if request.method == 'POST':
         kennzeichen_raw = request.form.get('kennzeichen', '').strip()
-        datum_str = request.form.get('datum', '')
+        von_str = request.form.get('von', '')
+        bis_str = request.form.get('bis', '')
         kennzeichen = normalisiere_kennzeichen(kennzeichen_raw)
 
         if not kennzeichen:
@@ -481,19 +485,58 @@ def parkplatz():
             return redirect(url_for('parkplatz'))
 
         try:
-            datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
+            von = datetime.strptime(von_str, '%Y-%m-%d').date()
         except ValueError:
-            datum = date.today()
+            von = date.today()
 
-        bestehend = ParkTicket.query.filter_by(kennzeichen=kennzeichen, datum=datum).first()
-        if bestehend:
-            flash('Fuer das Kontrollschild ' + kennzeichen_raw.upper() + ' wurde am ' + datum.strftime('%d.%m.%Y') + ' bereits ein Parkticket geloest.', 'warning')
+        if bis_str:
+            try:
+                bis = datetime.strptime(bis_str, '%Y-%m-%d').date()
+            except ValueError:
+                bis = von
+        else:
+            bis = von
+
+        if bis < von:
+            flash('Das Enddatum darf nicht vor dem Startdatum liegen.', 'danger')
             return redirect(url_for('parkplatz'))
 
-        ticket = ParkTicket(user_id=current_user.id, kennzeichen=kennzeichen, datum=datum)
-        db.session.add(ticket)
-        db.session.commit()
-        flash('Tagesticket fuer ' + kennzeichen_raw.upper() + ' am ' + datum.strftime('%d.%m.%Y') + ' wurde geloest.', 'success')
+        if (bis - von).days > 31:
+            flash('Bitte maximal 31 Tage auf einmal buchen.', 'danger')
+            return redirect(url_for('parkplatz'))
+
+        erstellt = []
+        bereits_vorhanden = []
+        voll = []
+
+        aktueller_tag = von
+        while aktueller_tag <= bis:
+            bestehend = ParkTicket.query.filter_by(kennzeichen=kennzeichen, datum=aktueller_tag).first()
+            if bestehend:
+                bereits_vorhanden.append(aktueller_tag)
+            else:
+                anzahl_belegt = ParkTicket.query.filter_by(datum=aktueller_tag).count()
+                if anzahl_belegt >= MAX_PARKPLAETZE:
+                    voll.append(aktueller_tag)
+                else:
+                    ticket = ParkTicket(user_id=current_user.id, kennzeichen=kennzeichen, datum=aktueller_tag)
+                    db.session.add(ticket)
+                    erstellt.append(aktueller_tag)
+            aktueller_tag += timedelta(days=1)
+
+        if erstellt:
+            db.session.commit()
+            if len(erstellt) == 1:
+                flash('Tagesticket fuer ' + kennzeichen_raw.upper() + ' am ' + erstellt[0].strftime('%d.%m.%Y') + ' wurde geloest.', 'success')
+            else:
+                flash('Tagestickets fuer ' + kennzeichen_raw.upper() + ' wurden geloest: ' + ', '.join(d.strftime('%d.%m.%Y') for d in erstellt), 'success')
+
+        if bereits_vorhanden:
+            flash('Fuer ' + kennzeichen_raw.upper() + ' bestand bereits ein Ticket am: ' + ', '.join(d.strftime('%d.%m.%Y') for d in bereits_vorhanden), 'warning')
+
+        if voll:
+            flash('Keine freien Parkplaetze mehr (Limite ' + str(MAX_PARKPLAETZE) + ') am: ' + ', '.join(d.strftime('%d.%m.%Y') for d in voll), 'danger')
+
         return redirect(url_for('parkplatz'))
 
     eigene_tickets = ParkTicket.query.filter_by(user_id=current_user.id) \
@@ -503,12 +546,26 @@ def parkplatz():
     for t in eigene_tickets:
         tage_pro_kennzeichen[t.kennzeichen] = tage_pro_kennzeichen.get(t.kennzeichen, 0) + 1
 
+    heute = date.today()
+    vorschau = []
+    for i in range(14):
+        tag = heute + timedelta(days=i)
+        belegt = ParkTicket.query.filter_by(datum=tag).count()
+        vorschau.append({
+            'datum': tag,
+            'belegt': belegt,
+            'frei': max(0, MAX_PARKPLAETZE - belegt),
+            'voll': belegt >= MAX_PARKPLAETZE,
+        })
+
     return render_template(
         'parkplatz.html',
         eigene_tickets=eigene_tickets,
         tage_pro_kennzeichen=tage_pro_kennzeichen,
         gesamt_tage=len(eigene_tickets),
-        heute=date.today(),
+        heute=heute,
+        max_parkplaetze=MAX_PARKPLAETZE,
+        vorschau=vorschau,
     )
 
 
