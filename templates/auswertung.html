@@ -32,6 +32,7 @@
             <th>Name</th>
             <th>Anzahl Buchungen</th>
             <th>Gesamtstunden</th>
+            <th>Betrag (CHF)</th>
             <th>Anteil</th>
         </tr>
     </thead>
@@ -42,16 +43,17 @@
             <td>{{ e.name }}</td>
             <td>{{ e.anzahl }}</td>
             <td>{{ '%.2f'|format(e.stunden) }}</td>
+            <td>{{ '%.2f'|format(e.betrag) }}</td>
             <td>
-                {% if gesamt_stunden > 0 %}
-                    {{ '%.1f'|format(e.stunden / gesamt_stunden * 100) }} %
+                {% if gesamt_betrag > 0 %}
+                    {{ '%.1f'|format(e.betrag / gesamt_betrag * 100) }} %
                 {% else %}
                     -
                 {% endif %}
             </td>
         </tr>
         {% else %}
-        <tr><td colspan="5" class="text-muted">Keine Buchungen im gewählten Zeitraum.</td></tr>
+        <tr><td colspan="6" class="text-muted">Keine Buchungen im gewählten Zeitraum.</td></tr>
         {% endfor %}
     </tbody>
     {% if ergebnisse %}
@@ -60,6 +62,7 @@
             <td colspan="2">Gesamt</td>
             <td>{{ gesamt_buchungen }}</td>
             <td>{{ '%.2f'|format(gesamt_stunden) }}</td>
+            <td>{{ '%.2f'|format(gesamt_betrag) }}</td>
             <td>100 %</td>
         </tr>
     </tfoot>
