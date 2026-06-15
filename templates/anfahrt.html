@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Anfahrt{% endblock %}
+{% block content %}
+<h4 class="mb-3">Anfahrt zur Baustelle</h4>
+<p class="text-muted">Wilhelmshöhe 1, 6003 Luzern</p>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body p-0">
+                <iframe
+                    src="https://www.google.com/maps?q=Wilhelmsh%C3%B6he+1,+6003+Luzern&output=embed"
+                    width="100%"
+                    height="450"
+                    style="border:0; display:block;"
+                    allowfullscreen=""
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade">
+                </iframe>
+            </div>
+        </div>
+        <p class="mt-2">
+            <a class="btn btn-outline-primary btn-sm"
+               href="https://www.google.com/maps/dir/?api=1&destination=Wilhelmsh%C3%B6he+1,+6003+Luzern"
+               target="_blank" rel="noopener">
+                Route in Google Maps öffnen
+            </a>
+        </p>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Baustelleninstallationsplan</h5>
+                {% if installationsplan_vorhanden %}
+                <a href="{{ url_for('static', filename='installationsplan.jpg') }}" target="_blank">
+                    <img src="{{ url_for('static', filename='installationsplan.jpg') }}"
+                         alt="Baustelleninstallationsplan"
+                         class="img-fluid rounded border">
+                </a>
+                <p class="text-muted small mt-2">Zum Vergrössern anklicken.</p>
+                {% else %}
+                <div class="border rounded p-4 text-center text-muted">
+                    Der Baustelleninstallationsplan wurde noch nicht hochgeladen.<br>
+                    Bitte als <code>static/installationsplan.jpg</code> ins Projekt hochladen –
+                    er erscheint dann automatisch an dieser Stelle.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
