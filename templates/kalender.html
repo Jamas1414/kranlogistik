@@ -1,105 +1,151 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% block title %}Kalender{% endblock %}
 {% block content %}
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <div class="btn-group">
-        <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=vorheriger_tag.isoformat()) }}">&laquo; Vorheriger Tag</a>
-        <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=naechster_tag.isoformat()) }}">Nächster Tag &raquo;</a>
-    </div>
-    <form method="GET" action="{{ url_for('kalender') }}" class="d-flex gap-2">
-        <input type="date" name="datum" class="form-control" value="{{ ausgewaehlter_tag.isoformat() }}">
-        <button type="submit" class="btn btn-warning">Anzeigen</button>
-    </form>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=vorheriger_tag.strftime('%Y-%m-%d')) }}">&laquo; Vortag</a>
+    <h4 class="mb-0">{{ ausgewaehlter_tag.strftime('%d.%m.%Y') }}</h4>
+    <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=naechster_tag.strftime('%Y-%m-%d')) }}">Folgetag &raquo;</a>
 </div>
 
-<h4 class="mb-3">Kranbelegung am {{ ausgewaehlter_tag.strftime('%A, %d.%m.%Y') }}</h4>
+<div class="card mb-4">
+    <div class="card-header">
+        Belegung {{ '%02d:00'|format(slot_start_hour) }} - {{ '%02d:00'|format(slot_end_hour) }} Uhr
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for seg in segmente %}
+        <li class="list-group-item d-flex justify-content-between align-items-center {% if seg.belegt %}{% if seg.ist_eigene %}list-group-item-primary{% else %}list-group-item-danger{% endif %}{% else %}list-group-item-success{% endif %}">
+            <div>
+                <strong>{{ seg.start.strftime('%H:%M') }} - {{ seg.end.strftime('%H:%M') }}</strong>
+                ({{ seg.dauer_minuten }} Min.)
+                {% if seg.belegt %}
+                    {% if seg.booking %}
+                        - {{ seg.booking.user.firma }} ({{ seg.booking.user.name }})
+                        {% if seg.booking.bemerkung %} &mdash; {{ seg.booking.bemerkung }}{% endif %}
+                    {% endif %}
+                {% else %}
+                    - frei
+                {% endif %}
+            </div>
+            {% if seg.belegt and seg.booking and (seg.ist_eigene or current_user.is_admin()) %}
+            <form method="POST" action="{{ url_for('buchung_loeschen', booking_id=seg.booking.id) }}" onsubmit="return confirm('Buchung wirklich stornieren?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
+            </form>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
 
-<div class="row">
-    <div class="col-lg-7">
-        <div class="list-group mb-4">
-            {% for seg in segmente %}
-            <div class="list-group-item d-flex justify-content-between align-items-center {% if seg.belegt %}{% if seg.ist_eigene %}list-group-item-warning{% else %}list-group-item-light{% endif %}{% else %}list-group-item-success{% endif %}">
-                <div>
-                    <strong>{{ seg.start.strftime('%H:%M') }} – {{ seg.end.strftime('%H:%M') }}</strong>
-                    <span class="text-muted small">
-                        ({{ (seg.dauer_minuten // 60) }} Std.{% if seg.dauer_minuten % 60 %} {{ '%02d'|format(seg.dauer_minuten % 60) }} Min.{% endif %})
-                    </span>
-                    {% if seg.belegt %}
-                        <br>
-                        <span class="text-muted small">
-                            Reserviert von {{ seg.booking.user.firma }} ({{ seg.booking.user.name }})
-                            – {{ buchungsarten[seg.booking.buchungsart].label if seg.booking.buchungsart in buchungsarten else seg.booking.buchungsart }}
-                            (CHF {{ '%.2f'|format(seg.booking.preis) }})
-                            {% if seg.booking.bemerkung %} – {{ seg.booking.bemerkung }}{% endif %}
-                        </span>
-                    {% else %}
-                        <br><span class="badge bg-success">frei</span>
-                    {% endif %}
+<div class="card">
+    <div class="card-header">Kran buchen</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('buchen') }}">
+            <input type="hidden" name="datum" value="{{ ausgewaehlter_tag.strftime('%Y-%m-%d') }}">
+
+            <div class="mb-3">
+                <label class="form-label">Was möchtest du buchen?</label>
+                <select name="buchungsart" id="buchungsart" class="form-select" required>
+                    {% for key, info in buchungsarten.items() %}
+                    <option value="{{ key }}">
+                        {{ info.label }}{% if info.preis is not none %} - CHF {{ '%.2f'|format(info.preis) }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="row">
+                <div class="col-6 mb-3">
+                    <label class="form-label">Beginn</label>
+                    <input type="time" name="start" id="start" class="form-control"
+                           min="{{ '%02d:00'|format(slot_start_hour) }}" max="{{ '%02d:00'|format(slot_end_hour) }}"
+                           step="600" required>
                 </div>
-                <div>
-                    {% if seg.belegt %}
-                        {% if seg.ist_eigene or current_user.is_admin() %}
-                        <form method="POST" action="{{ url_for('buchung_loeschen', booking_id=seg.booking.id) }}" onsubmit="return confirm('Buchung wirklich stornieren?');">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
-                        </form>
-                        {% endif %}
-                    {% else %}
-                        <button type="button" class="btn btn-sm btn-warning"
-                                onclick="reservieren('{{ seg.start.strftime('%H:%M') }}')">
-                            Reservieren
-                        </button>
-                    {% endif %}
+                <div class="col-6 mb-3" id="ende-gruppe">
+                    <label class="form-label">Ende</label>
+                    <input type="time" name="end" id="end" class="form-control"
+                           min="{{ '%02d:00'|format(slot_start_hour) }}" max="{{ '%02d:00'|format(slot_end_hour) }}"
+                           step="600">
                 </div>
             </div>
-            {% endfor %}
-        </div>
-        <p class="text-muted small">
-            Grün hinterlegte Abschnitte sind frei und können ganz oder teilweise gebucht werden – wähle dazu einfach
-            die gewünschte Buchungsart und Startzeit im Formular rechts.
-        </p>
+
+            <div class="alert alert-light border small" id="preis-hinweis">
+                Bitte Buchungsart und Beginn wählen.
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Bemerkung (optional)</label>
+                <input type="text" name="bemerkung" class="form-control" maxlength="255">
+            </div>
+
+            <button type="submit" class="btn btn-danger">Reservieren</button>
+        </form>
     </div>
+</div>
 
-    <div class="col-lg-5">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Kran reservieren</h5>
-                <form method="POST" action="{{ url_for('buchen') }}" id="buchungsform">
-                    <input type="hidden" name="datum" value="{{ ausgewaehlter_tag.isoformat() }}">
-                    <div class="mb-3">
-                        <label class="form-label">Datum</label>
-                        <input type="text" class="form-control" value="{{ ausgewaehlter_tag.strftime('%d.%m.%Y') }}" disabled>
-                    </div>
+<script>
+const buchungsarten = {{ buchungsarten|tojson }};
+const stundensatz = {{ stundensatz }};
+const buchungsartSelect = document.getElementById('buchungsart');
+const startInput = document.getElementById('start');
+const endInput = document.getElementById('end');
+const endeGruppe = document.getElementById('ende-gruppe');
+const preisHinweis = document.getElementById('preis-hinweis');
 
-                    <div class="mb-3">
-                        <label class="form-label">Was möchtest du buchen?</label>
-                        <select name="buchungsart" id="buchungsart" class="form-select" required>
-                            {% for key, info in buchungsarten.items() %}
-                            <option value="{{ key }}">
-                                {{ info.label }}{% if info.preis is not none %} – CHF {{ '%.2f'|format(info.preis) }}{% endif %}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+function zeitZuMinuten(zeit) {
+    if (!zeit) return null;
+    const teile = zeit.split(':');
+    return parseInt(teile[0], 10) * 60 + parseInt(teile[1], 10);
+}
 
-                    <div class="row">
-                        <div class="col-6 mb-3">
-                            <label class="form-label">Beginn</label>
-                            <input type="time" name="start" id="start" class="form-control"
-                                   min="{{ '%02d:00'|format(slot_start_hour) }}" max="{{ '%02d:00'|format(slot_end_hour) }}"
-                                   step="600" required>
-                        </div>
-                        <div class="col-6 mb-3" id="ende-gruppe">
-                            <label class="form-label">Ende</label>
-                            <input type="time" name="end" id="end" class="form-control"
-                                   min="{{ '%02d:00'|format(slot_start_hour) }}" max="{{ '%02d:00'|format(slot_end_hour) }}"
-                                   step="600">
-                        </div>
-                    </div>
+function minutenZuZeit(minuten) {
+    const h = Math.floor(minuten / 60);
+    const m = minuten % 60;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
 
-                    <div class="alert alert-light border small" id="preis-hinweis">
-                        Bitte Buchungsart und Beginn wählen.
-                    </div>
+function aktualisieren() {
+    const art = buchungsartSelect.value;
+    const info = buchungsarten[art];
 
-                    <div class="mb-3">
-                        <label class="form-label">Bemerkung
+    if (info.dauer_minuten !== null) {
+        endeGruppe.style.display = 'none';
+        endInput.required = false;
+
+        const start = zeitZuMinuten(startInput.value);
+        if (start !== null) {
+            endInput.value = minutenZuZeit(start + info.dauer_minuten);
+        }
+
+        preisHinweis.textContent = info.label + ' - Preis: CHF ' + info.preis.toFixed(2);
+    } else {
+        endeGruppe.style.display = '';
+        endInput.required = true;
+
+        const start = zeitZuMinuten(startInput.value);
+        const end = zeitZuMinuten(endInput.value);
+
+        if (start !== null && end !== null && end > start) {
+            let minuten = end - start;
+            const pauseStart = 12 * 60;
+            const pauseEnde = 13 * 60;
+            const overlapStart = Math.max(start, pauseStart);
+            const overlapEnde = Math.min(end, pauseEnde);
+            const overlap = Math.max(0, overlapEnde - overlapStart);
+            minuten -= overlap;
+            const preis = Math.max(0, minuten) / 60 * stundensatz;
+            preisHinweis.textContent = 'Individuelle Buchung - geschätzter Preis: CHF ' + preis.toFixed(2) + ' (Mittagspause 12:00-13:00 abgezogen)';
+        } else {
+            preisHinweis.textContent = 'Bitte Beginn und Ende wählen.';
+        }
+    }
+}
+
+buchungsartSelect.addEventListener('change', aktualisieren);
+startInput.addEventListener('change', aktualisieren);
+endInput.addEventListener('change', aktualisieren);
+
+aktualisieren();
+</script>
+
+{% endblock %}
