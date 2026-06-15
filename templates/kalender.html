@@ -1,17 +1,105 @@
-tages_buchungen = Booking.query.filter_by(datum=ausgewaehlter_tag).all()
+{% extends 'base.html' %}
+{% block title %}Kalender{% endblock %}
+{% block content %}
 
-    segmente = build_day_segments(
-        ausgewaehlter_tag, tages_buchungen, current_user.id, current_user.is_admin()
-    )
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="btn-group">
+        <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=vorheriger_tag.isoformat()) }}">&laquo; Vorheriger Tag</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('kalender', datum=naechster_tag.isoformat()) }}">Nächster Tag &raquo;</a>
+    </div>
+    <form method="GET" action="{{ url_for('kalender') }}" class="d-flex gap-2">
+        <input type="date" name="datum" class="form-control" value="{{ ausgewaehlter_tag.isoformat() }}">
+        <button type="submit" class="btn btn-warning">Anzeigen</button>
+    </form>
+</div>
 
-    return render_template(
-        'kalender.html',
-        ausgewaehlter_tag=ausgewaehlter_tag,
-        vorheriger_tag=vorheriger_tag,
-        naechster_tag=naechster_tag,
-        segmente=segmente,
-        buchungsarten=BUCHUNGSARTEN,
-        stundensatz=STUNDENSATZ,
-        slot_start_hour=SLOT_START_HOUR,
-        slot_end_hour=SLOT_END_HOUR,
-    )
+<h4 class="mb-3">Kranbelegung am {{ ausgewaehlter_tag.strftime('%A, %d.%m.%Y') }}</h4>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="list-group mb-4">
+            {% for seg in segmente %}
+            <div class="list-group-item d-flex justify-content-between align-items-center {% if seg.belegt %}{% if seg.ist_eigene %}list-group-item-warning{% else %}list-group-item-light{% endif %}{% else %}list-group-item-success{% endif %}">
+                <div>
+                    <strong>{{ seg.start.strftime('%H:%M') }} – {{ seg.end.strftime('%H:%M') }}</strong>
+                    <span class="text-muted small">
+                        ({{ (seg.dauer_minuten // 60) }} Std.{% if seg.dauer_minuten % 60 %} {{ '%02d'|format(seg.dauer_minuten % 60) }} Min.{% endif %})
+                    </span>
+                    {% if seg.belegt %}
+                        <br>
+                        <span class="text-muted small">
+                            Reserviert von {{ seg.booking.user.firma }} ({{ seg.booking.user.name }})
+                            – {{ buchungsarten[seg.booking.buchungsart].label if seg.booking.buchungsart in buchungsarten else seg.booking.buchungsart }}
+                            (CHF {{ '%.2f'|format(seg.booking.preis) }})
+                            {% if seg.booking.bemerkung %} – {{ seg.booking.bemerkung }}{% endif %}
+                        </span>
+                    {% else %}
+                        <br><span class="badge bg-success">frei</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if seg.belegt %}
+                        {% if seg.ist_eigene or current_user.is_admin() %}
+                        <form method="POST" action="{{ url_for('buchung_loeschen', booking_id=seg.booking.id) }}" onsubmit="return confirm('Buchung wirklich stornieren?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Stornieren</button>
+                        </form>
+                        {% endif %}
+                    {% else %}
+                        <button type="button" class="btn btn-sm btn-warning"
+                                onclick="reservieren('{{ seg.start.strftime('%H:%M') }}')">
+                            Reservieren
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="text-muted small">
+            Grün hinterlegte Abschnitte sind frei und können ganz oder teilweise gebucht werden – wähle dazu einfach
+            die gewünschte Buchungsart und Startzeit im Formular rechts.
+        </p>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Kran reservieren</h5>
+                <form method="POST" action="{{ url_for('buchen') }}" id="buchungsform">
+                    <input type="hidden" name="datum" value="{{ ausgewaehlter_tag.isoformat() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Datum</label>
+                        <input type="text" class="form-control" value="{{ ausgewaehlter_tag.strftime('%d.%m.%Y') }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Was möchtest du buchen?</label>
+                        <select name="buchungsart" id="buchungsart" class="form-select" required>
+                            {% for key, info in buchungsarten.items() %}
+                            <option value="{{ key }}">
+                                {{ info.label }}{% if info.preis is not none %} – CHF {{ '%.2f'|format(info.preis) }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Beginn</label>
+                            <input type="time" name="start" id="start" class="form-control"
+                                   min="{{ '%02d:00'|format(slot_start_hour) }}" max="{{ '%02d:00'|format(slot_end_hour) }}"
+                                   step="600" required>
+                        </div>
+                        <div class="col-6 mb-3" id="ende-gruppe">
+                            <label class="form-label">Ende</label>
+                            <input type="time" name="end" id="end" class="form-control"
+                                   min="{{ '%02d:00'|format(slot_start_hour) }}" max="{{ '%02d:00'|format(slot_end_hour) }}"
+                                   step="600">
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border small" id="preis-hinweis">
+                        Bitte Buchungsart und Beginn wählen.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Bemerkung
