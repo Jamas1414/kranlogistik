@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Start{% endblock %}
+{% block content %}
+
+<div class="mb-4">
+    <h3 class="mb-1">Willkommen, {{ current_user.name }}</h3>
+    <p class="text-muted mb-0">{{ current_user.firma }} &mdash; was moechtest du tun?</p>
+</div>
+
+<div class="row g-4">
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('kalender') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-red">
+                <i class="bi bi-truck"></i>
+            </div>
+            <div class="dashboard-label">Kran buchen</div>
+            <div class="dashboard-sub">Kalender &amp; Reservierung</div>
+        </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('parkplatz') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-blue">
+                <i class="bi bi-p-square"></i>
+            </div>
+            <div class="dashboard-label">Parkplatz</div>
+            <div class="dashboard-sub">Tagesticket loesen</div>
+        </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('meine_buchungen') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-green">
+                <i class="bi bi-card-checklist"></i>
+            </div>
+            <div class="dashboard-label">Meine Buchungen</div>
+            <div class="dashboard-sub">Uebersicht &amp; Stornieren</div>
+        </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('auswertung') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-orange">
+                <i class="bi bi-bar-chart-line"></i>
+            </div>
+            <div class="dashboard-label">Auswertung</div>
+            <div class="dashboard-sub">Kosten &amp; Statistik</div>
+        </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('anfahrt') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-grey">
+                <i class="bi bi-signpost-2"></i>
+            </div>
+            <div class="dashboard-label">Anfahrt</div>
+            <div class="dashboard-sub">Lageplan &amp; Hinweise</div>
+        </a>
+    </div>
+
+    {% if current_user.is_admin() %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('parkplatz_pruefung') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-purple">
+                <i class="bi bi-search"></i>
+            </div>
+            <div class="dashboard-label">Parkplatz-Pruefung</div>
+            <div class="dashboard-sub">Kontrolle der Tickets</div>
+        </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-lg-3">
+        <a href="{{ url_for('admin') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-dark">
+                <i class="bi bi-gear"></i>
+            </div>
+            <div class="dashboard-label">Administration</div>
+            <div class="dashboard-sub">Benutzer &amp; Einstellungen</div>
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}
