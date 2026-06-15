@@ -12,6 +12,8 @@
             <th>Von</th>
             <th>Bis</th>
             <th>Dauer (h)</th>
+            <th>Buchungsart</th>
+            <th>Preis (CHF)</th>
             <th>Bemerkung</th>
             <th></th>
         </tr>
@@ -23,6 +25,8 @@
             <td>{{ b.start_zeit.strftime('%H:%M') }}</td>
             <td>{{ b.end_zeit.strftime('%H:%M') }}</td>
             <td>{{ b.dauer_stunden }}</td>
+            <td>{{ buchungsarten[b.buchungsart].label if b.buchungsart in buchungsarten else b.buchungsart }}</td>
+            <td>{{ '%.2f'|format(b.preis) }}</td>
             <td>{{ b.bemerkung or '' }}</td>
             <td>
                 <form method="POST" action="{{ url_for('buchung_loeschen', booking_id=b.id) }}" onsubmit="return confirm('Buchung wirklich stornieren?');">
@@ -32,6 +36,13 @@
         </tr>
         {% endfor %}
     </tbody>
+    <tfoot>
+        <tr class="fw-bold">
+            <td colspan="5">Gesamt</td>
+            <td>{{ '%.2f'|format(buchungen | sum(attribute='preis')) }}</td>
+            <td colspan="2"></td>
+        </tr>
+    </tfoot>
 </table>
 </div>
 {% else %}
