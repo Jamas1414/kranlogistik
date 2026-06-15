@@ -32,8 +32,8 @@ class User(db.Model, UserMixin):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(160), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='extern')  # 'admin' oder 'extern'
-    active = db.Column(db.Boolean, default=True)  # Admin-Freigabe
+    role = db.Column(db.String(20), nullable=False, default='extern')
+    active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     bookings = db.relationship('Booking', backref='user', lazy=True)
@@ -85,13 +85,12 @@ def load_user(user_id):
 # Hilfsfunktionen
 # ---------------------------------------------------------------------------
 
-SLOT_START_HOUR = 6   # Kran-Betriebsbeginn
-SLOT_END_HOUR = 18    # Kran-Betriebsende
-SLOT_LENGTH_MIN = 60  # Slot-Länge in Minuten
+SLOT_START_HOUR = 6
+SLOT_END_HOUR = 18
+SLOT_LENGTH_MIN = 60
 
 
 def generate_day_slots(day):
-    """Erzeugt die möglichen Zeitslots für einen Tag als Liste von (start, end) Zeiten."""
     slots = []
     current = datetime.combine(day, datetime.min.time()).replace(hour=SLOT_START_HOUR)
     end_of_day = datetime.combine(day, datetime.min.time()).replace(hour=SLOT_END_HOUR)
@@ -107,16 +106,10 @@ def overlaps(start1, end1, start2, end2):
 
 
 def normalisiere_kennzeichen(kennzeichen):
-    """Normalisiert ein Kontrollschild für den Vergleich (Grossbuchstaben, ohne Leer-/Sonderzeichen)."""
     return ''.join(ch for ch in kennzeichen.upper() if ch.isalnum())
 
 
 def build_day_segments(day, buchungen, current_user_id, is_admin):
-    """
-    Baut eine Liste von zusammenhängenden Zeitabschnitten für den Betriebstag,
-    abwechselnd 'frei' und 'belegt'. So sind auch kurze Buchungen (z.B. 10-Min-Kranzug)
-    sichtbar, ohne dass die ganze Stunde als belegt erscheint.
-    """
     referenz = datetime.combine(day, datetime.min.time())
     tagesbeginn = referenz.replace(hour=SLOT_START_HOUR)
     tagesende = referenz.replace(hour=SLOT_END_HOUR)
@@ -173,7 +166,7 @@ def build_day_segments(day, buchungen, current_user_id, is_admin):
 # Abrechnung Kran-Nutzung
 # ---------------------------------------------------------------------------
 
-STUNDENSATZ = 250.0  # CHF pro Kranstunde (für Zeitbuchungen)
+STUNDENSATZ = 250.0
 MITTAGSPAUSE_START = time(12, 0)
 MITTAGSPAUSE_ENDE = time(13, 0)
 
@@ -187,7 +180,6 @@ BUCHUNGSARTEN = {
 
 
 def berechne_preis(buchungsart, start_zeit, end_zeit):
-    """Berechnet den zu bezahlenden Preis für eine Buchung."""
     info = BUCHUNGSARTEN.get(buchungsart)
     if info and info['preis'] is not None:
         return info['preis']
@@ -207,7 +199,6 @@ def berechne_preis(buchungsart, start_zeit, end_zeit):
 
 # ---------------------------------------------------------------------------
 # Datenbank: vor jeder Anfrage sicherstellen, dass die Tabellen existieren
-# (wichtig, da Render Free-Tier die SQLite-Datei bei Neustarts zurücksetzt)
 # ---------------------------------------------------------------------------
 
 @app.before_request
@@ -215,6 +206,36 @@ def _ensure_db():
     if not getattr(app, '_db_initialized', False):
         db.create_all()
         app._db_initialized = True
+
+
+@app.route('/debug-db')
+def debug_db():
+    import sqlite3
+    db_path = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    exists = os.path.isfile(db_path)
+    info = f"DB-Pfad: {db_path}\nDatei existiert: {exists}\n"
+    if exists:
+        info += f"Dateigroesse: {os.path.getsize(db_path)} Bytes\n"
+        conn = sqlite3.connect(db_path)
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        conn.close()
+        info += f"Tabellen: {tables}\n"
+    try:
+        db.create_all()
+        info += "create_all() erfolgreich ausgefuehrt.\n"
+    except Exception as e:
+        info += f"create_all() Fehler: {e}\n"
+
+    db_path2 = app.config['SQLALCHEMY_DATABASE_URI'].replace('sqlite:///', '')
+    exists2 = os.path.isfile(db_path2)
+    info += f"Datei existiert nach create_all(): {exists2}\n"
+    if exists2:
+        conn = sqlite3.connect(db_path2)
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        conn.close()
+        info += f"Tabellen nach create_all(): {tables}\n"
+
+    return f"<pre>{info}</pre>"
 
 
 # ---------------------------------------------------------------------------
@@ -470,228 +491,3 @@ def parkplatz():
         bestehend = ParkTicket.query.filter_by(kennzeichen=kennzeichen, datum=datum).first()
         if bestehend:
             flash(
-                f'Für das Kontrollschild {kennzeichen_raw.upper()} wurde am {datum.strftime("%d.%m.%Y")} '
-                f'bereits ein Parkticket gelöst.', 'warning'
-            )
-            return redirect(url_for('parkplatz'))
-
-        ticket = ParkTicket(user_id=current_user.id, kennzeichen=kennzeichen, datum=datum)
-        db.session.add(ticket)
-        db.session.commit()
-        flash(
-            f'Tagesticket für {kennzeichen_raw.upper()} am {datum.strftime("%d.%m.%Y")} wurde gelöst.', 'success'
-        )
-        return redirect(url_for('parkplatz'))
-
-    eigene_tickets = ParkTicket.query.filter_by(user_id=current_user.id) \
-        .order_by(ParkTicket.datum.desc(), ParkTicket.kennzeichen).all()
-
-    tage_pro_kennzeichen = {}
-    for t in eigene_tickets:
-        tage_pro_kennzeichen[t.kennzeichen] = tage_pro_kennzeichen.get(t.kennzeichen, 0) + 1
-
-    return render_template(
-        'parkplatz.html',
-        eigene_tickets=eigene_tickets,
-        tage_pro_kennzeichen=tage_pro_kennzeichen,
-        gesamt_tage=len(eigene_tickets),
-        heute=date.today(),
-    )
-
-
-@app.route('/parkplatz/<int:ticket_id>/loeschen', methods=['POST'])
-@login_required
-def parkplatz_loeschen(ticket_id):
-    ticket = ParkTicket.query.get_or_404(ticket_id)
-    if ticket.user_id != current_user.id and not current_user.is_admin():
-        flash('Du kannst nur eigene Parktickets stornieren.', 'danger')
-        return redirect(url_for('parkplatz'))
-
-    db.session.delete(ticket)
-    db.session.commit()
-    flash('Parkticket wurde storniert.', 'success')
-    return redirect(url_for('parkplatz'))
-
-
-@app.route('/parkplatz/pruefung')
-@login_required
-def parkplatz_pruefung():
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    datum_str = request.args.get('datum')
-    if datum_str:
-        try:
-            datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
-        except ValueError:
-            datum = date.today()
-    else:
-        datum = date.today()
-
-    tickets_heute = ParkTicket.query.filter_by(datum=datum).order_by(ParkTicket.kennzeichen).all()
-
-    return render_template('parkplatz_pruefung.html', tickets_heute=tickets_heute, datum=datum)
-
-
-@app.route('/api/parkplatz/check')
-@login_required
-def api_parkplatz_check():
-    if not current_user.is_admin():
-        return {'error': 'Kein Zugriff'}, 403
-
-    kennzeichen = normalisiere_kennzeichen(request.args.get('kennzeichen', ''))
-    datum_str = request.args.get('datum')
-    try:
-        datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        datum = date.today()
-
-    if not kennzeichen:
-        return {'gefunden': False}
-
-    ticket = ParkTicket.query.filter_by(kennzeichen=kennzeichen, datum=datum).first()
-    if ticket:
-        return {
-            'gefunden': True,
-            'kennzeichen': ticket.kennzeichen,
-            'firma': ticket.user.firma,
-            'name': ticket.user.name,
-            'datum': ticket.datum.strftime('%d.%m.%Y'),
-        }
-
-    return {'gefunden': False, 'kennzeichen': kennzeichen, 'datum': datum.strftime('%d.%m.%Y')}
-
-
-# ---------------------------------------------------------------------------
-# Routen: Admin
-# ---------------------------------------------------------------------------
-
-def admin_required():
-    if not current_user.is_authenticated or not current_user.is_admin():
-        flash('Kein Zugriff. Diese Seite ist nur für Administratoren.', 'danger')
-        return False
-    return True
-
-
-@app.route('/admin')
-@login_required
-def admin():
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    users = User.query.order_by(User.created_at).all()
-    return render_template('admin.html', users=users)
-
-
-@app.route('/admin/user/<int:user_id>/toggle-active', methods=['POST'])
-@login_required
-def admin_toggle_active(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    user.active = not user.active
-    db.session.commit()
-    flash(f'Konto von {user.name} ({user.firma}) wurde {"freigeschaltet" if user.active else "gesperrt"}.', 'success')
-    return redirect(url_for('admin'))
-
-
-@app.route('/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
-@login_required
-def admin_toggle_admin(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('Du kannst deine eigene Admin-Rolle nicht ändern.', 'warning')
-        return redirect(url_for('admin'))
-
-    user.role = 'extern' if user.role == 'admin' else 'admin'
-    db.session.commit()
-    flash(f'Rolle von {user.name} ({user.firma}) wurde geändert auf "{user.role}".', 'success')
-    return redirect(url_for('admin'))
-
-
-@app.route('/admin/user/<int:user_id>/passwort-zuruecksetzen', methods=['POST'])
-@login_required
-def admin_reset_password(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    neues_passwort = request.form.get('neues_passwort', '').strip()
-
-    if len(neues_passwort) < 6:
-        flash('Das neue Passwort muss mindestens 6 Zeichen lang sein.', 'danger')
-        return redirect(url_for('admin'))
-
-    user.set_password(neues_passwort)
-    db.session.commit()
-    flash(f'Passwort für {user.name} ({user.firma}) wurde zurückgesetzt.', 'success')
-    return redirect(url_for('admin'))
-
-
-@app.route('/admin/user/<int:user_id>/loeschen', methods=['POST'])
-@login_required
-def admin_user_loeschen(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('Du kannst dein eigenes Konto hier nicht löschen.', 'warning')
-        return redirect(url_for('admin'))
-
-    Booking.query.filter_by(user_id=user.id).delete()
-    db.session.delete(user)
-    db.session.commit()
-    flash(f'Benutzer {user.name} ({user.firma}) wurde gelöscht.', 'success')
-    return redirect(url_for('admin'))
-
-
-# ---------------------------------------------------------------------------
-# Routen: Auswertung
-# ---------------------------------------------------------------------------
-
-@app.route('/auswertung')
-@login_required
-def auswertung():
-    von_str = request.args.get('von')
-    bis_str = request.args.get('bis')
-
-    heute = date.today()
-    if von_str:
-        von = datetime.strptime(von_str, '%Y-%m-%d').date()
-    else:
-        von = heute.replace(day=1)
-
-    if bis_str:
-        bis = datetime.strptime(bis_str, '%Y-%m-%d').date()
-    else:
-        bis = heute
-
-    query = Booking.query.filter(Booking.datum >= von, Booking.datum <= bis)
-
-    if not current_user.is_admin():
-        query = query.filter(Booking.user_id == current_user.id)
-
-    buchungen = query.all()
-
-    auswertung_pro_user = {}
-    for b in buchungen:
-        key = b.user_id
-        if key not in auswertung_pro_user:
-            auswertung_pro_user[key] = {
-                'name': b.user.name,
-                'firma': b.user.firma,
-                'anzahl': 0,
-                'stunden': 0.0,
-                'betrag': 0.0,
-            }
-        auswertung_pro_user[key]['anzahl'] += 1
-        auswertung_pro_user[key]['stunden'] += b.dauer_stunden
-        auswertung_pro_user[key]['betrag'] += b.preis
-
-    ergebnisse = sorted(auswertung_pro_user.values(), key=lambda x: x['betrag'], reverse=True)
-    gesamt_stunden =
