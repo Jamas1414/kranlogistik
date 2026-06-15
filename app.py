@@ -363,4 +363,4 @@ def buchen():
             return redirect(url_for('kalender', datum=datum_str))
 
     if datum < date.today():
-        flash('Buchungen in der Vergangenheit sind nicht
+        flash('Buchungen in der Vergangenheit sind nicht möglich.', 'danger')
