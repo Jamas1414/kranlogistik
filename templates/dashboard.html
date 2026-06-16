@@ -2,85 +2,221 @@
 {% block title %}Start{% endblock %}
 {% block content %}
 
-<div class="mb-4">
-    <h3 class="mb-1">Willkommen, {{ current_user.name }}</h3>
-    <p class="text-muted mb-0">{{ current_user.firma }} &mdash; was moechtest du tun?</p>
+<div class="mb-3">
+    <h4 class="mb-0">Willkommen, {{ current_user.name }}</h4>
+    <p class="text-muted small mb-0">{{ current_user.firma }}</p>
 </div>
 
-<div class="row g-4">
+<div class="row g-3" style="min-height: 78vh;">
 
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('kalender') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-red">
-                <i class="bi bi-truck"></i>
+    <!-- Linke Seite: IFC Viewer -->
+    <div class="col-12 col-lg-7">
+        <div class="card h-100 p-0" style="overflow:hidden; min-height: 400px;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-box me-1"></i> 3D Modell Viewer</span>
+                <label for="ifc-dash-input" class="btn btn-sm btn-danger mb-0">
+                    <i class="bi bi-upload me-1"></i> IFC laden
+                </label>
+                <input type="file" id="ifc-dash-input" accept=".ifc" style="display:none">
             </div>
-            <div class="dashboard-label">Kran buchen</div>
-            <div class="dashboard-sub">Kalender &amp; Reservierung</div>
-        </a>
+            <div style="height: calc(100% - 49px); min-height: 380px; background:#1a1a2e; position:relative;">
+                <canvas id="dash-canvas" style="width:100%; height:100%; display:block;"></canvas>
+
+                <div id="dash-loading" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; flex-direction:column; color:white; text-align:center;">
+                    <div class="spinner-border text-light mb-2"></div>
+                    <div class="small">Modell wird geladen...</div>
+                </div>
+
+                <div id="dash-hint" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#666; text-align:center; pointer-events:none;">
+                    <i class="bi bi-box" style="font-size:3.5rem; color:#444;"></i>
+                    <div class="mt-2" style="font-size:0.95rem;">IFC Datei laden</div>
+                    <div class="small mt-1" style="color:#444;">Drag &amp; Drop oder "IFC laden"</div>
+                </div>
+
+                <div style="position:absolute; bottom:8px; right:10px; color:#444; font-size:0.7rem;">
+                    Drehen &nbsp;|&nbsp; Rechtsklick: Verschieben &nbsp;|&nbsp; Scroll: Zoom
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('parkplatz') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-blue">
-                <i class="bi bi-p-square"></i>
-            </div>
-            <div class="dashboard-label">Parkplatz</div>
-            <div class="dashboard-sub">Tagesticket loesen</div>
-        </a>
-    </div>
+    <!-- Rechte Seite: Icon-Kacheln -->
+    <div class="col-12 col-lg-5">
+        <div class="row g-3 h-100 align-content-start">
 
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('meine_buchungen') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-green">
-                <i class="bi bi-card-checklist"></i>
+            <div class="col-6">
+                <a href="{{ url_for('kalender') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-red">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <div class="dashboard-label">Kran buchen</div>
+                    <div class="dashboard-sub">Kalender &amp; Reservierung</div>
+                </a>
             </div>
-            <div class="dashboard-label">Meine Buchungen</div>
-            <div class="dashboard-sub">Uebersicht &amp; Stornieren</div>
-        </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('auswertung') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-orange">
-                <i class="bi bi-bar-chart-line"></i>
+            <div class="col-6">
+                <a href="{{ url_for('parkplatz') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-blue">
+                        <i class="bi bi-p-square"></i>
+                    </div>
+                    <div class="dashboard-label">Parkplatz</div>
+                    <div class="dashboard-sub">Tagesticket loesen</div>
+                </a>
             </div>
-            <div class="dashboard-label">Auswertung</div>
-            <div class="dashboard-sub">Kosten &amp; Statistik</div>
-        </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('anfahrt') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-grey">
-                <i class="bi bi-signpost-2"></i>
+            <div class="col-6">
+                <a href="{{ url_for('meine_buchungen') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-green">
+                        <i class="bi bi-card-checklist"></i>
+                    </div>
+                    <div class="dashboard-label">Meine Buchungen</div>
+                    <div class="dashboard-sub">Uebersicht &amp; Stornieren</div>
+                </a>
             </div>
-            <div class="dashboard-label">Anfahrt</div>
-            <div class="dashboard-sub">Lageplan &amp; Hinweise</div>
-        </a>
-    </div>
 
-    {% if current_user.is_admin() %}
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('parkplatz_pruefung') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-purple">
-                <i class="bi bi-search"></i>
+            <div class="col-6">
+                <a href="{{ url_for('auswertung') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-orange">
+                        <i class="bi bi-bar-chart-line"></i>
+                    </div>
+                    <div class="dashboard-label">Auswertung</div>
+                    <div class="dashboard-sub">Kosten &amp; Statistik</div>
+                </a>
             </div>
-            <div class="dashboard-label">Parkplatz-Pruefung</div>
-            <div class="dashboard-sub">Kontrolle der Tickets</div>
-        </a>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-3">
-        <a href="{{ url_for('admin') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-dark">
-                <i class="bi bi-gear"></i>
+            <div class="col-6">
+                <a href="{{ url_for('anfahrt') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-grey">
+                        <i class="bi bi-signpost-2"></i>
+                    </div>
+                    <div class="dashboard-label">Anfahrt</div>
+                    <div class="dashboard-sub">Lageplan &amp; Hinweise</div>
+                </a>
             </div>
-            <div class="dashboard-label">Administration</div>
-            <div class="dashboard-sub">Benutzer &amp; Einstellungen</div>
-        </a>
+
+            <div class="col-6">
+                <a href="{{ url_for('modell') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-teal">
+                        <i class="bi bi-box"></i>
+                    </div>
+                    <div class="dashboard-label">3D Modell</div>
+                    <div class="dashboard-sub">IFC Viewer (Vollbild)</div>
+                </a>
+            </div>
+
+            {% if current_user.is_admin() %}
+            <div class="col-6">
+                <a href="{{ url_for('parkplatz_pruefung') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-purple">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <div class="dashboard-label">Parkplatz-Pruefung</div>
+                    <div class="dashboard-sub">Kontrolle der Tickets</div>
+                </a>
+            </div>
+
+            <div class="col-6">
+                <a href="{{ url_for('admin') }}" class="dashboard-tile text-decoration-none">
+                    <div class="dashboard-icon bg-dark">
+                        <i class="bi bi-gear"></i>
+                    </div>
+                    <div class="dashboard-label">Administration</div>
+                    <div class="dashboard-sub">Benutzer &amp; Einstellungen</div>
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
     </div>
-    {% endif %}
 
 </div>
+
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.160.0';
+import { OrbitControls } from 'https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+import { IFCLoader } from 'https://esm.sh/web-ifc-three@0.0.136';
+
+const canvas = document.getElementById('dash-canvas');
+const hint = document.getElementById('dash-hint');
+const overlay = document.getElementById('dash-loading');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+
+const camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / Math.max(canvas.clientHeight, 1), 0.01, 5000);
+camera.position.set(15, 15, 15);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+dir.position.set(20, 40, 20);
+scene.add(dir);
+scene.add(new THREE.HemisphereLight(0x8899bb, 0x334455, 0.4));
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+scene.add(new THREE.GridHelper(100, 100, 0x333344, 0x222233));
+
+const ifcLoader = new IFCLoader();
+await ifcLoader.ifcManager.setWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.44/');
+
+new ResizeObserver(() => {
+    const pw = canvas.parentElement.clientWidth;
+    const ph = canvas.parentElement.clientHeight;
+    if (pw > 0 && ph > 0) {
+        camera.aspect = pw / ph;
+        camera.updateProjectionMatrix();
+        renderer.setSize(pw, ph);
+    }
+}).observe(canvas.parentElement);
+
+(function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+})();
+
+async function ladeIFC(file) {
+    hint.style.display = 'none';
+    overlay.style.display = 'flex';
+    scene.children.filter(o => o.userData.isIFC).forEach(o => scene.remove(o));
+    const url = URL.createObjectURL(file);
+    try {
+        const model = await ifcLoader.loadAsync(url);
+        model.userData.isIFC = true;
+        scene.add(model);
+        const box = new THREE.Box3().setFromObject(model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const d = Math.max(size.x, size.y, size.z);
+        camera.position.set(center.x + d * 1.2, center.y + d * 0.8, center.z + d * 1.2);
+        controls.target.copy(center);
+        controls.update();
+    } catch (err) {
+        hint.style.display = 'flex';
+        alert('Fehler: ' + err.message);
+    } finally {
+        overlay.style.display = 'none';
+        URL.revokeObjectURL(url);
+    }
+}
+
+document.getElementById('ifc-dash-input').addEventListener('change', e => {
+    if (e.target.files[0]) ladeIFC(e.target.files[0]);
+});
+
+const dropZone = canvas.parentElement;
+dropZone.addEventListener('dragover', e => e.preventDefault());
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f && f.name.endsWith('.ifc')) ladeIFC(f);
+});
+</script>
 
 {% endblock %}
