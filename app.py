@@ -249,7 +249,22 @@ def debug_db():
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        return render_template('dashboard.html')
+        heute = date.today()
+        naechste_buchung = Booking.query.filter(
+            Booking.user_id == current_user.id,
+            Booking.datum >= heute
+        ).order_by(Booking.datum, Booking.start_zeit).first()
+        aktive_tickets = ParkTicket.query.filter(
+            ParkTicket.user_id == current_user.id,
+            ParkTicket.datum >= heute
+        ).count()
+        letzte_buchung = Booking.query.filter_by(
+            user_id=current_user.id
+        ).order_by(Booking.created_at.desc()).first()
+        return render_template('dashboard.html',
+                               naechste_buchung=naechste_buchung,
+                               aktive_tickets=aktive_tickets,
+                               letzte_buchung=letzte_buchung)
     return redirect(url_for('login'))
 
 
@@ -260,7 +275,6 @@ def test_login():
     if user is None:
         user = User.query.first()
     if user is None:
-        # Testbenutzer automatisch anlegen
         user = User(
             firma='Testfirma',
             name='Test Admin',
@@ -557,4 +571,311 @@ def parkplatz():
                     ticket = ParkTicket(user_id=current_user.id, kennzeichen=kennzeichen, datum=aktueller_tag)
                     db.session.add(ticket)
                     erstellt.append(aktueller_tag)
-            aktueller_tag +=
+            aktueller_tag += timedelta(days=1)
+
+        if erstellt:
+            db.session.commit()
+            if len(erstellt) == 1:
+                flash('Tagesticket fuer ' + kennzeichen_raw.upper() + ' am ' + erstellt[0].strftime('%d.%m.%Y') + ' wurde geloest.', 'success')
+            else:
+                flash('Tagestickets fuer ' + kennzeichen_raw.upper() + ' wurden geloest: ' + ', '.join(d.strftime('%d.%m.%Y') for d in erstellt), 'success')
+
+        if bereits_vorhanden:
+            flash('Fuer ' + kennzeichen_raw.upper() + ' bestand bereits ein Ticket am: ' + ', '.join(d.strftime('%d.%m.%Y') for d in bereits_vorhanden), 'warning')
+
+        if voll:
+            flash('Keine freien Parkplaetze mehr (Limite ' + str(MAX_PARKPLAETZE) + ') am: ' + ', '.join(d.strftime('%d.%m.%Y') for d in voll), 'danger')
+
+        return redirect(url_for('parkplatz'))
+
+    eigene_tickets = ParkTicket.query.filter_by(user_id=current_user.id) \
+        .order_by(ParkTicket.datum.desc(), ParkTicket.kennzeichen).all()
+
+    tage_pro_kennzeichen = {}
+    for t in eigene_tickets:
+        tage_pro_kennzeichen[t.kennzeichen] = tage_pro_kennzeichen.get(t.kennzeichen, 0) + 1
+
+    heute = date.today()
+    vorschau = []
+    for i in range(14):
+        tag = heute + timedelta(days=i)
+        belegt = ParkTicket.query.filter_by(datum=tag).count()
+        vorschau.append({
+            'datum': tag,
+            'belegt': belegt,
+            'frei': max(0, MAX_PARKPLAETZE - belegt),
+            'voll': belegt >= MAX_PARKPLAETZE,
+        })
+
+    return render_template(
+        'parkplatz.html',
+        eigene_tickets=eigene_tickets,
+        tage_pro_kennzeichen=tage_pro_kennzeichen,
+        gesamt_tage=len(eigene_tickets),
+        heute=heute,
+        max_parkplaetze=MAX_PARKPLAETZE,
+        vorschau=vorschau,
+    )
+
+
+@app.route('/parkplatz/<int:ticket_id>/loeschen', methods=['POST'])
+@login_required
+def parkplatz_loeschen(ticket_id):
+    ticket = ParkTicket.query.get_or_404(ticket_id)
+    if ticket.user_id != current_user.id and not current_user.is_admin():
+        flash('Du kannst nur eigene Parktickets stornieren.', 'danger')
+        return redirect(url_for('parkplatz'))
+
+    db.session.delete(ticket)
+    db.session.commit()
+    flash('Parkticket wurde storniert.', 'success')
+    return redirect(url_for('parkplatz'))
+
+
+@app.route('/parkplatz/pruefung')
+@login_required
+def parkplatz_pruefung():
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    datum_str = request.args.get('datum')
+    if datum_str:
+        try:
+            datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
+        except ValueError:
+            datum = date.today()
+    else:
+        datum = date.today()
+
+    tickets_heute = ParkTicket.query.filter_by(datum=datum).order_by(ParkTicket.kennzeichen).all()
+
+    return render_template('parkplatz_pruefung.html', tickets_heute=tickets_heute, datum=datum)
+
+
+@app.route('/api/parkplatz/check')
+@login_required
+def api_parkplatz_check():
+    if not current_user.is_admin():
+        return {'error': 'Kein Zugriff'}, 403
+
+    kennzeichen = normalisiere_kennzeichen(request.args.get('kennzeichen', ''))
+    datum_str = request.args.get('datum')
+    try:
+        datum = datetime.strptime(datum_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        datum = date.today()
+
+    if not kennzeichen:
+        return {'gefunden': False}
+
+    ticket = ParkTicket.query.filter_by(kennzeichen=kennzeichen, datum=datum).first()
+    if ticket:
+        return {
+            'gefunden': True,
+            'kennzeichen': ticket.kennzeichen,
+            'firma': ticket.user.firma,
+            'name': ticket.user.name,
+            'datum': ticket.datum.strftime('%d.%m.%Y'),
+        }
+
+    return {'gefunden': False, 'kennzeichen': kennzeichen, 'datum': datum.strftime('%d.%m.%Y')}
+
+
+# ---------------------------------------------------------------------------
+# Routen: Admin
+# ---------------------------------------------------------------------------
+
+def admin_required():
+    if not current_user.is_authenticated or not current_user.is_admin():
+        flash('Kein Zugriff. Diese Seite ist nur fuer Administratoren.', 'danger')
+        return False
+    return True
+
+
+@app.route('/admin')
+@login_required
+def admin():
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    users = User.query.order_by(User.created_at).all()
+    return render_template('admin.html', users=users)
+
+
+@app.route('/admin/user/<int:user_id>/toggle-active', methods=['POST'])
+@login_required
+def admin_toggle_active(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    user = User.query.get_or_404(user_id)
+    user.active = not user.active
+    db.session.commit()
+    flash('Konto von ' + user.name + ' (' + user.firma + ') wurde ' + ('freigeschaltet' if user.active else 'gesperrt') + '.', 'success')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
+@login_required
+def admin_toggle_admin(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('Du kannst deine eigene Admin-Rolle nicht aendern.', 'warning')
+        return redirect(url_for('admin'))
+
+    user.role = 'extern' if user.role == 'admin' else 'admin'
+    db.session.commit()
+    flash('Rolle von ' + user.name + ' (' + user.firma + ') wurde geaendert auf "' + user.role + '".', 'success')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/passwort-zuruecksetzen', methods=['POST'])
+@login_required
+def admin_reset_password(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    user = User.query.get_or_404(user_id)
+    neues_passwort = request.form.get('neues_passwort', '').strip()
+
+    if len(neues_passwort) < 6:
+        flash('Das neue Passwort muss mindestens 6 Zeichen lang sein.', 'danger')
+        return redirect(url_for('admin'))
+
+    user.set_password(neues_passwort)
+    db.session.commit()
+    flash('Passwort fuer ' + user.name + ' (' + user.firma + ') wurde zurueckgesetzt.', 'success')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/loeschen', methods=['POST'])
+@login_required
+def admin_user_loeschen(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id:
+        flash('Du kannst dein eigenes Konto hier nicht loeschen.', 'warning')
+        return redirect(url_for('admin'))
+
+    Booking.query.filter_by(user_id=user.id).delete()
+    db.session.delete(user)
+    db.session.commit()
+    flash('Benutzer ' + user.name + ' (' + user.firma + ') wurde geloescht.', 'success')
+    return redirect(url_for('admin'))
+
+
+# ---------------------------------------------------------------------------
+# Routen: Auswertung
+# ---------------------------------------------------------------------------
+
+@app.route('/auswertung')
+@login_required
+def auswertung():
+    von_str = request.args.get('von')
+    bis_str = request.args.get('bis')
+
+    heute = date.today()
+    if von_str:
+        von = datetime.strptime(von_str, '%Y-%m-%d').date()
+    else:
+        von = heute.replace(day=1)
+
+    if bis_str:
+        bis = datetime.strptime(bis_str, '%Y-%m-%d').date()
+    else:
+        bis = heute
+
+    query = Booking.query.filter(Booking.datum >= von, Booking.datum <= bis)
+
+    if not current_user.is_admin():
+        query = query.filter(Booking.user_id == current_user.id)
+
+    buchungen = query.all()
+
+    auswertung_pro_user = {}
+    for b in buchungen:
+        key = b.user_id
+        if key not in auswertung_pro_user:
+            auswertung_pro_user[key] = {
+                'name': b.user.name,
+                'firma': b.user.firma,
+                'anzahl': 0,
+                'stunden': 0.0,
+                'betrag': 0.0,
+            }
+        auswertung_pro_user[key]['anzahl'] += 1
+        auswertung_pro_user[key]['stunden'] += b.dauer_stunden
+        auswertung_pro_user[key]['betrag'] += b.preis
+
+    ergebnisse = sorted(auswertung_pro_user.values(), key=lambda x: x['betrag'], reverse=True)
+    gesamt_stunden = sum(e['stunden'] for e in ergebnisse)
+    gesamt_buchungen = sum(e['anzahl'] for e in ergebnisse)
+    gesamt_betrag = sum(e['betrag'] for e in ergebnisse)
+
+    return render_template(
+        'auswertung.html',
+        ergebnisse=ergebnisse,
+        von=von,
+        bis=bis,
+        gesamt_stunden=gesamt_stunden,
+        gesamt_buchungen=gesamt_buchungen,
+        gesamt_betrag=gesamt_betrag,
+    )
+
+
+@app.route('/auswertung/export')
+@login_required
+def auswertung_export():
+    von_str = request.args.get('von')
+    bis_str = request.args.get('bis')
+
+    heute = date.today()
+    von = datetime.strptime(von_str, '%Y-%m-%d').date() if von_str else heute.replace(day=1)
+    bis = datetime.strptime(bis_str, '%Y-%m-%d').date() if bis_str else heute
+
+    query = Booking.query.filter(Booking.datum >= von, Booking.datum <= bis)
+    if not current_user.is_admin():
+        query = query.filter(Booking.user_id == current_user.id)
+
+    buchungen = query.order_by(Booking.datum, Booking.start_zeit).all()
+
+    zeilen = ['Datum;Firma;Name;Start;Ende;Dauer (h);Buchungsart;Preis (CHF);Bemerkung']
+    gesamt_betrag = 0.0
+    for b in buchungen:
+        gesamt_betrag += b.preis
+        art = BUCHUNGSARTEN.get(b.buchungsart, {}).get('label', b.buchungsart)
+        zeilen.append(
+            b.datum.strftime('%d.%m.%Y') + ';' + b.user.firma + ';' + b.user.name + ';' +
+            b.start_zeit.strftime('%H:%M') + ';' + b.end_zeit.strftime('%H:%M') + ';' +
+            str(b.dauer_stunden) + ';' + art + ';' + ('%.2f' % b.preis) + ';' + (b.bemerkung or '')
+        )
+    zeilen.append(';;;;;;;' + ('%.2f' % gesamt_betrag) + ';Gesamtbetrag')
+
+    csv_data = '\n'.join(zeilen)
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=krannutzung_' + str(von) + '_' + str(bis) + '.csv'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# CLI: DB initialisieren
+# ---------------------------------------------------------------------------
+
+@app.cli.command('init-db')
+def init_db():
+    """Erstellt alle Tabellen."""
+    db.create_all()
+    print('Datenbank wurde initialisiert.')
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True, host='0.0.0.0', port=5000)
