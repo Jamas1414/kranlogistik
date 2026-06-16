@@ -23,8 +23,11 @@
                             <button type="submit" class="btn btn-warning w-100">Einloggen</button>
                         </form>
                         <hr>
+                        <a href="{{ url_for('test_login') }}" class="btn btn-outline-secondary w-100 mb-2">
+                            TEST: Direkt einloggen (kein Passwort)
+                        </a>
                         <p class="text-center mb-0">Noch kein Konto? <a href="{{ url_for('register') }}">Registrieren</a></p>
-                        <p class="text-center text-muted small mt-2">Passwort vergessen? Bitte einen Administrator kontaktieren – er kann dir im Admin-Bereich ein neues Passwort setzen.</p>
+                        <p class="text-center text-muted small mt-2">Passwort vergessen? Bitte einen Administrator kontaktieren.</p>
                     </div>
                 </div>
             </div>
