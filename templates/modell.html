@@ -5,118 +5,60 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0"><i class="bi bi-box me-2"></i>3D Modell Viewer</h4>
     <label for="ifc-input" class="btn btn-danger mb-0">
-        <i class="bi bi-upload me-1"></i> IFC Datei laden
+        <i class="bi bi-upload me-1"></i> Datei laden
     </label>
-    <input type="file" id="ifc-input" accept=".ifc" style="display:none">
+    <input type="file" id="ifc-input" accept=".ifc,.obj,.stl,.gltf,.glb,.fbx,.3ds,.dae,.ply,.off" style="display:none">
 </div>
 
 <div class="card p-0" style="overflow:hidden;">
-    <div style="height:75vh; background:#1a1a2e; position:relative;">
-        <canvas id="three-canvas" style="width:100%; height:100%; display:block;"></canvas>
-
-        <div id="loading-overlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; flex-direction:column; color:white; text-align:center;">
-            <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
-            <div>Modell wird geladen...</div>
-            <div class="text-muted small mt-1">Grosse Dateien koennen etwas dauern</div>
-        </div>
-
+    <div id="viewer_container" style="width:100%; height:78vh; position:relative; background:#1a1a2e; border-radius:10px;">
+        <div id="viewer" style="width:100%; height:100%;"></div>
         <div id="hint" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#888; text-align:center; pointer-events:none;">
-            <i class="bi bi-box" style="font-size:4rem; color:#555;"></i>
-            <div class="mt-3" style="font-size:1.1rem;">IFC Datei laden um das 3D-Modell anzuzeigen</div>
-            <div class="mt-1 small" style="color:#555;">Drag &amp; Drop oder Schaltflaeche oben rechts</div>
-        </div>
-
-        <div style="position:absolute; bottom:12px; right:12px; color:#555; font-size:0.75rem;">
-            Linksklick: Drehen &nbsp;|&nbsp; Rechtsklick: Verschieben &nbsp;|&nbsp; Scroll: Zoomen
+            <i class="bi bi-box" style="font-size:4rem; color:#444;"></i>
+            <div class="mt-3" style="font-size:1.05rem;">IFC oder andere 3D-Datei laden</div>
+            <div class="small mt-1" style="color:#555;">Unterstuetzte Formate: .ifc, .obj, .stl, .gltf, .glb, .fbx, .3ds, .dae, .ply</div>
+            <div class="small mt-1" style="color:#555;">Drag &amp; Drop hier hinein oder Schaltflaeche oben rechts</div>
         </div>
     </div>
 </div>
 
-<script type="module">
-import * as THREE from 'https://esm.sh/three@0.160.0';
-import { OrbitControls } from 'https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js';
-import { IFCLoader } from 'https://esm.sh/web-ifc-three@0.0.136';
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.css">
+<script src="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.js"></script>
 
-const canvas = document.getElementById('three-canvas');
-const hint = document.getElementById('hint');
-const overlay = document.getElementById('loading-overlay');
+<script>
+var viewer = null;
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
-
-const w = canvas.parentElement.clientWidth;
-const h = canvas.parentElement.clientHeight;
-const camera = new THREE.PerspectiveCamera(60, w / h, 0.01, 5000);
-camera.position.set(15, 15, 15);
-
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setSize(w, h);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled = true;
-
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-dirLight.position.set(20, 40, 20);
-scene.add(dirLight);
-scene.add(new THREE.HemisphereLight(0x8899bb, 0x334455, 0.4));
-
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-
-scene.add(new THREE.GridHelper(100, 100, 0x333344, 0x222233));
-
-const ifcLoader = new IFCLoader();
-await ifcLoader.ifcManager.setWasmPath('https://cdn.jsdelivr.net/npm/web-ifc@0.0.44/');
-
-new ResizeObserver(() => {
-    const pw = canvas.parentElement.clientWidth;
-    const ph = canvas.parentElement.clientHeight;
-    camera.aspect = pw / ph;
-    camera.updateProjectionMatrix();
-    renderer.setSize(pw, ph);
-}).observe(canvas.parentElement);
-
-(function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    renderer.render(scene, camera);
-})();
-
-async function ladeIFC(file) {
-    hint.style.display = 'none';
-    overlay.style.display = 'flex';
-    scene.children.filter(obj => obj.userData.isIFCModel).forEach(obj => scene.remove(obj));
-    const url = URL.createObjectURL(file);
-    try {
-        const model = await ifcLoader.loadAsync(url);
-        model.userData.isIFCModel = true;
-        scene.add(model);
-        const box = new THREE.Box3().setFromObject(model);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        camera.position.set(center.x + maxDim * 1.2, center.y + maxDim * 0.8, center.z + maxDim * 1.2);
-        controls.target.copy(center);
-        controls.update();
-    } catch (err) {
-        hint.style.display = 'flex';
-        alert('Fehler beim Laden: ' + err.message);
-    } finally {
-        overlay.style.display = 'none';
-        URL.revokeObjectURL(url);
-    }
-}
-
-document.getElementById('ifc-input').addEventListener('change', (e) => {
-    if (e.target.files[0]) ladeIFC(e.target.files[0]);
+window.addEventListener('load', function () {
+    OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/');
+    var container = document.getElementById('viewer');
+    viewer = new OV.EmbedViewer(container, {
+        backgroundColor: new OV.RGBAColor(26, 26, 46, 255),
+        defaultColor: new OV.RGBColor(200, 200, 200),
+        edgeSettings: new OV.EdgeSettings(false, new OV.RGBColor(0, 0, 0), 1)
+    });
 });
 
-canvas.parentElement.addEventListener('dragover', (e) => { e.preventDefault(); });
-canvas.parentElement.addEventListener('drop', (e) => {
+function ladeDatei(files) {
+    if (!viewer || files.length === 0) return;
+    document.getElementById('hint').style.display = 'none';
+    viewer.LoadModelFromFileList(files);
+}
+
+document.getElementById('ifc-input').addEventListener('change', function (e) {
+    ladeDatei(e.target.files);
+});
+
+var container = document.getElementById('viewer_container');
+container.addEventListener('dragover', function (e) {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.name.endsWith('.ifc')) ladeIFC(file);
+    e.stopPropagation();
+});
+container.addEventListener('drop', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files.length > 0) {
+        ladeDatei(e.dataTransfer.files);
+    }
 });
 </script>
 
