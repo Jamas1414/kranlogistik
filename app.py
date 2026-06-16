@@ -253,6 +253,20 @@ def index():
     return redirect(url_for('login'))
 
 
+@app.route('/test-login')
+def test_login():
+    """NUR FUER TESTS - vor Produktion entfernen!"""
+    user = User.query.filter_by(role='admin').first()
+    if user is None:
+        user = User.query.first()
+    if user is None:
+        flash('Kein Benutzer vorhanden. Bitte zuerst registrieren.', 'warning')
+        return redirect(url_for('login'))
+    login_user(user)
+    flash('TEST-Login als ' + user.name + ' (' + user.firma + ')', 'warning')
+    return redirect(url_for('index'))
+
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
