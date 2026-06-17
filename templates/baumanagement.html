@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Baumanagement{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none" style="color:var(--kran-primary);">Start</a></li>
+        <li class="breadcrumb-item active">Baumanagement</li>
+    </ol>
+</nav>
+
+<div class="d-flex align-items-center mb-4 gap-3">
+    <div style="width:48px; height:48px; border-radius:14px; background:var(--kran-primary); display:flex; align-items:center; justify-content:center;">
+        <i class="bi bi-building" style="font-size:1.5rem; color:#fff;"></i>
+    </div>
+    <div>
+        <h4 class="mb-0 fw-bold" style="color:var(--kran-text);">Baumanagement</h4>
+        <div class="small" style="color:var(--kran-muted);">Rechnungen und weitere Verwaltungsaufgaben</div>
+    </div>
+</div>
+
+<div class="row g-3">
+
+    <div class="col-6 col-sm-4 col-lg-3">
+        <a href="{{ url_for('rechnungen_einreichen') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-blue"><i class="bi bi-receipt"></i></div>
+            <div class="dashboard-label">Rechnung einreichen</div>
+            <div class="dashboard-sub">Auftrag &amp; BKP angeben</div>
+        </a>
+    </div>
+
+    <div class="col-6 col-sm-4 col-lg-3">
+        <a href="{{ url_for('rechnungen_liste') }}" class="dashboard-tile text-decoration-none">
+            <div class="dashboard-icon bg-teal"><i class="bi bi-card-list"></i></div>
+            <div class="dashboard-label">Meine Rechnungen</div>
+            <div class="dashboard-sub">Eingereichte Dokumente</div>
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}
