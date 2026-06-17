@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#c8102e">
-    <title>{% block title %}BfB{% endblock %} - Baustellenlogistik</title>
+    <meta name="theme-color" content="#1a2332">
+    <title>{% block title %}KranLogistik{% endblock %} - Baustellenlogistik</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
@@ -14,21 +14,41 @@
 {% if current_user.is_authenticated %}
 <nav class="navbar navbar-dark kran-navbar shadow-sm">
     <div class="container-fluid px-3">
+
+        <!-- Logo + Brand -->
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('index') }}">
-            <span class="bfb-badge">BfB</span>
-            <span class="d-none d-sm-inline">Baustellenlogistik</span>
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+                <!-- Mast -->
+                <rect x="14" y="10" width="4" height="18" rx="1" fill="#7ec8ce"/>
+                <!-- Ausleger -->
+                <rect x="4" y="10" width="24" height="3.5" rx="1" fill="#7ec8ce"/>
+                <!-- Gegenausleger oben -->
+                <rect x="4" y="6" width="10" height="2.5" rx="1" fill="#a8dde2"/>
+                <!-- Diagonale -->
+                <line x1="14" y1="10" x2="5" y2="13.5" stroke="#a8dde2" stroke-width="1.5"/>
+                <!-- Haengeseil -->
+                <line x1="24" y1="13.5" x2="21" y2="22" stroke="#a8dde2" stroke-width="1.5" stroke-dasharray="2 1.5"/>
+                <!-- Haken -->
+                <rect x="19.5" y="22" width="3" height="3" rx="1" fill="none" stroke="#7ec8ce" stroke-width="1.5"/>
+                <!-- Sockel -->
+                <rect x="12" y="27" width="8" height="2.5" rx="1" fill="#a8dde2"/>
+                <!-- Raeupchen -->
+                <rect x="10" y="29" width="12" height="2" rx="1" fill="#5ab0b8"/>
+            </svg>
+            <span class="d-none d-sm-inline" style="letter-spacing:0.3px;">KranLogistik</span>
         </a>
+
         <div class="d-flex align-items-center gap-2 gap-sm-3">
-            <span class="navbar-text text-white-50 small d-none d-md-inline">
+            <span class="navbar-text small d-none d-md-inline" style="color:rgba(255,255,255,0.6);">
                 <i class="bi bi-person-circle me-1"></i>{{ current_user.name }} &middot; {{ current_user.firma }}
                 {% if current_user.is_admin() %}
-                <span class="badge ms-1" style="background:rgba(255,255,255,0.25);font-size:0.65rem;">Admin</span>
+                <span class="badge ms-1" style="background:rgba(245,158,11,0.3);color:#f59e0b;font-size:0.65rem;">Admin</span>
                 {% endif %}
             </span>
-            <a href="{{ url_for('index') }}" class="btn btn-sm {% if request.path == url_for('index') %}btn-light{% else %}btn-outline-light{% endif %}">
+            <a href="{{ url_for('index') }}" class="btn btn-sm {% if request.path == url_for('index') %}kran-btn-active{% else %}kran-btn-outline{% endif %}">
                 <i class="bi bi-house"></i>
             </a>
-            <a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">
+            <a class="btn btn-sm kran-btn-outline" href="{{ url_for('logout') }}">
                 <i class="bi bi-box-arrow-right me-1"></i><span class="d-none d-sm-inline">Abmelden</span>
             </a>
         </div>
