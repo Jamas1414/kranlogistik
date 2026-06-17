@@ -1,4 +1,5 @@
 import os
+import calendar as cal_module
 from datetime import datetime, date, time, timedelta
 
 from flask import Flask, render_template, redirect, url_for, request, flash, Response
@@ -196,6 +197,10 @@ BUCHUNGSARTEN = {
 
 MAX_PARKPLAETZE = 25
 
+MONATE_DE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+             'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+WOCHENTAGE_DE = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
+
 
 def berechne_preis(buchungsart, start_zeit, end_zeit):
     info = BUCHUNGSARTEN.get(buchungsart)
@@ -389,33 +394,103 @@ def logout():
 @login_required
 def kalender():
     datum_str = request.args.get('datum')
+    monat_str = request.args.get('monat')
+
+    # Parse selected day
+    ausgewaehlter_tag = None
     if datum_str:
         try:
             ausgewaehlter_tag = datetime.strptime(datum_str, '%Y-%m-%d').date()
         except ValueError:
-            ausgewaehlter_tag = date.today()
+            pass
+
+    # Determine which month to show
+    if monat_str:
+        try:
+            monat_start = datetime.strptime(monat_str + '-01', '%Y-%m-%d').date()
+        except ValueError:
+            monat_start = (ausgewaehlter_tag or date.today()).replace(day=1)
+    elif ausgewaehlter_tag:
+        monat_start = ausgewaehlter_tag.replace(day=1)
     else:
-        ausgewaehlter_tag = date.today()
+        monat_start = date.today().replace(day=1)
 
-    vorheriger_tag = ausgewaehlter_tag - timedelta(days=1)
-    naechster_tag = ausgewaehlter_tag + timedelta(days=1)
+    # Month boundaries
+    if monat_start.month == 12:
+        monat_ende = monat_start.replace(year=monat_start.year + 1, month=1)
+    else:
+        monat_ende = monat_start.replace(month=monat_start.month + 1)
 
-    tages_buchungen = Booking.query.filter_by(datum=ausgewaehlter_tag).all()
+    # Prev/next month (first day)
+    if monat_start.month == 1:
+        vorheriger_monat = monat_start.replace(year=monat_start.year - 1, month=12)
+    else:
+        vorheriger_monat = monat_start.replace(month=monat_start.month - 1)
+    naechster_monat = monat_ende
 
-    segmente = build_day_segments(
-        ausgewaehlter_tag, tages_buchungen, current_user.id, current_user.is_admin()
-    )
+    # Calendar grid: list of weeks (Mon=0 .. Sun=6), day=0 means padding
+    cal_grid = cal_module.monthcalendar(monat_start.year, monat_start.month)
+
+    # Bookings for the whole month (for availability coloring)
+    buchungen_monat = Booking.query.filter(
+        Booking.datum >= monat_start,
+        Booking.datum < monat_ende
+    ).all()
+
+    total_minuten = (SLOT_END_HOUR - SLOT_START_HOUR) * 60
+    belegung_by_date = {}
+    for b in buchungen_monat:
+        start_dt = datetime.combine(b.datum, b.start_zeit)
+        end_dt = datetime.combine(b.datum, b.end_zeit)
+        mins = int((end_dt - start_dt).total_seconds() / 60)
+        belegung_by_date[b.datum] = belegung_by_date.get(b.datum, 0) + mins
+
+    # Status per day number: 'vergangen' / 'frei' / 'teilweise' / 'voll'
+    heute = date.today()
+    monat_belegung = {}
+    for week in cal_grid:
+        for day_num in week:
+            if day_num == 0:
+                continue
+            tag = date(monat_start.year, monat_start.month, day_num)
+            if tag < heute:
+                monat_belegung[day_num] = 'vergangen'
+            else:
+                booked = belegung_by_date.get(tag, 0)
+                if booked >= total_minuten:
+                    monat_belegung[day_num] = 'voll'
+                elif booked > 0:
+                    monat_belegung[day_num] = 'teilweise'
+                else:
+                    monat_belegung[day_num] = 'frei'
+
+    # Day detail: segments for selected day
+    segmente = None
+    if ausgewaehlter_tag and monat_start <= ausgewaehlter_tag < monat_ende:
+        tages_buchungen = Booking.query.filter_by(datum=ausgewaehlter_tag).all()
+        segmente = build_day_segments(
+            ausgewaehlter_tag, tages_buchungen, current_user.id, current_user.is_admin()
+        )
+
+    monat_name = MONATE_DE[monat_start.month - 1] + ' ' + str(monat_start.year)
+    tag_name = WOCHENTAGE_DE[ausgewaehlter_tag.weekday()] if ausgewaehlter_tag else None
 
     return render_template(
         'kalender.html',
         ausgewaehlter_tag=ausgewaehlter_tag,
-        vorheriger_tag=vorheriger_tag,
-        naechster_tag=naechster_tag,
         segmente=segmente,
         buchungsarten=BUCHUNGSARTEN,
         stundensatz=STUNDENSATZ,
         slot_start_hour=SLOT_START_HOUR,
         slot_end_hour=SLOT_END_HOUR,
+        monat_start=monat_start,
+        vorheriger_monat=vorheriger_monat,
+        naechster_monat=naechster_monat,
+        monat_belegung=monat_belegung,
+        cal_grid=cal_grid,
+        heute=heute,
+        monat_name=monat_name,
+        tag_name=tag_name,
     )
 
 
@@ -622,16 +697,78 @@ def parkplatz():
         tage_pro_kennzeichen[t.kennzeichen] = tage_pro_kennzeichen.get(t.kennzeichen, 0) + 1
 
     heute = date.today()
-    vorschau = []
-    for i in range(14):
-        tag = heute + timedelta(days=i)
-        belegt = ParkTicket.query.filter_by(datum=tag).count()
-        vorschau.append({
-            'datum': tag,
-            'belegt': belegt,
-            'frei': max(0, MAX_PARKPLAETZE - belegt),
-            'voll': belegt >= MAX_PARKPLAETZE,
-        })
+
+    # Month calendar for parkplatz
+    monat_str = request.args.get('monat')
+    datum_str_park = request.args.get('datum')
+
+    ausgewaehlter_tag_park = None
+    if datum_str_park:
+        try:
+            ausgewaehlter_tag_park = datetime.strptime(datum_str_park, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+
+    if monat_str:
+        try:
+            monat_start_p = datetime.strptime(monat_str + '-01', '%Y-%m-%d').date()
+        except ValueError:
+            monat_start_p = (ausgewaehlter_tag_park or heute).replace(day=1)
+    elif ausgewaehlter_tag_park:
+        monat_start_p = ausgewaehlter_tag_park.replace(day=1)
+    else:
+        monat_start_p = heute.replace(day=1)
+
+    if monat_start_p.month == 12:
+        monat_ende_p = monat_start_p.replace(year=monat_start_p.year + 1, month=1)
+    else:
+        monat_ende_p = monat_start_p.replace(month=monat_start_p.month + 1)
+
+    if monat_start_p.month == 1:
+        vorheriger_monat_p = monat_start_p.replace(year=monat_start_p.year - 1, month=12)
+    else:
+        vorheriger_monat_p = monat_start_p.replace(month=monat_start_p.month - 1)
+    naechster_monat_p = monat_ende_p
+
+    cal_grid_p = cal_module.monthcalendar(monat_start_p.year, monat_start_p.month)
+
+    # Tickets in the month
+    tickets_monat = ParkTicket.query.filter(
+        ParkTicket.datum >= monat_start_p,
+        ParkTicket.datum < monat_ende_p
+    ).all()
+    belegt_by_date_p = {}
+    for t in tickets_monat:
+        belegt_by_date_p[t.datum] = belegt_by_date_p.get(t.datum, 0) + 1
+
+    # Status per day
+    monat_belegung_p = {}
+    for week in cal_grid_p:
+        for day_num in week:
+            if day_num == 0:
+                continue
+            tag = date(monat_start_p.year, monat_start_p.month, day_num)
+            if tag < heute:
+                monat_belegung_p[day_num] = 'vergangen'
+            else:
+                belegt = belegt_by_date_p.get(tag, 0)
+                frei = max(0, MAX_PARKPLAETZE - belegt)
+                if frei == 0:
+                    monat_belegung_p[day_num] = 'voll'
+                elif frei <= 5:
+                    monat_belegung_p[day_num] = 'wenig'
+                else:
+                    monat_belegung_p[day_num] = 'frei'
+
+    monat_name_p = MONATE_DE[monat_start_p.month - 1] + ' ' + str(monat_start_p.year)
+    tag_name_park = WOCHENTAGE_DE[ausgewaehlter_tag_park.weekday()] if ausgewaehlter_tag_park else None
+
+    # Free spots for selected day
+    if ausgewaehlter_tag_park:
+        belegt_ausgewaehlt = ParkTicket.query.filter_by(datum=ausgewaehlter_tag_park).count()
+        freie_plaetze_ausgewaehlt = max(0, MAX_PARKPLAETZE - belegt_ausgewaehlt)
+    else:
+        freie_plaetze_ausgewaehlt = None
 
     return render_template(
         'parkplatz.html',
@@ -640,7 +777,15 @@ def parkplatz():
         gesamt_tage=len(eigene_tickets),
         heute=heute,
         max_parkplaetze=MAX_PARKPLAETZE,
-        vorschau=vorschau,
+        monat_start_p=monat_start_p,
+        vorheriger_monat_p=vorheriger_monat_p,
+        naechster_monat_p=naechster_monat_p,
+        monat_belegung_p=monat_belegung_p,
+        cal_grid_p=cal_grid_p,
+        monat_name_p=monat_name_p,
+        ausgewaehlter_tag_park=ausgewaehlter_tag_park,
+        tag_name_park=tag_name_park,
+        freie_plaetze_ausgewaehlt=freie_plaetze_ausgewaehlt,
     )
 
 
@@ -821,158 +966,4 @@ def auswertung():
     if not current_user.is_admin():
         query = query.filter(Booking.user_id == current_user.id)
 
-    buchungen = query.all()
-
-    auswertung_pro_user = {}
-    for b in buchungen:
-        key = b.user_id
-        if key not in auswertung_pro_user:
-            auswertung_pro_user[key] = {
-                'name': b.user.name,
-                'firma': b.user.firma,
-                'anzahl': 0,
-                'stunden': 0.0,
-                'betrag': 0.0,
-            }
-        auswertung_pro_user[key]['anzahl'] += 1
-        auswertung_pro_user[key]['stunden'] += b.dauer_stunden
-        auswertung_pro_user[key]['betrag'] += b.preis
-
-    ergebnisse = sorted(auswertung_pro_user.values(), key=lambda x: x['betrag'], reverse=True)
-    gesamt_stunden = sum(e['stunden'] for e in ergebnisse)
-    gesamt_buchungen = sum(e['anzahl'] for e in ergebnisse)
-    gesamt_betrag = sum(e['betrag'] for e in ergebnisse)
-
-    return render_template(
-        'auswertung.html',
-        ergebnisse=ergebnisse,
-        von=von,
-        bis=bis,
-        gesamt_stunden=gesamt_stunden,
-        gesamt_buchungen=gesamt_buchungen,
-        gesamt_betrag=gesamt_betrag,
-    )
-
-
-@app.route('/auswertung/export')
-@login_required
-def auswertung_export():
-    von_str = request.args.get('von')
-    bis_str = request.args.get('bis')
-
-    heute = date.today()
-    von = datetime.strptime(von_str, '%Y-%m-%d').date() if von_str else heute.replace(day=1)
-    bis = datetime.strptime(bis_str, '%Y-%m-%d').date() if bis_str else heute
-
-    query = Booking.query.filter(Booking.datum >= von, Booking.datum <= bis)
-    if not current_user.is_admin():
-        query = query.filter(Booking.user_id == current_user.id)
-
-    buchungen = query.order_by(Booking.datum, Booking.start_zeit).all()
-
-    zeilen = ['Datum;Firma;Name;Start;Ende;Dauer (h);Buchungsart;Preis (CHF);Bemerkung']
-    gesamt_betrag = 0.0
-    for b in buchungen:
-        gesamt_betrag += b.preis
-        art = BUCHUNGSARTEN.get(b.buchungsart, {}).get('label', b.buchungsart)
-        zeilen.append(
-            b.datum.strftime('%d.%m.%Y') + ';' + b.user.firma + ';' + b.user.name + ';' +
-            b.start_zeit.strftime('%H:%M') + ';' + b.end_zeit.strftime('%H:%M') + ';' +
-            str(b.dauer_stunden) + ';' + art + ';' + ('%.2f' % b.preis) + ';' + (b.bemerkung or '')
-        )
-    zeilen.append(';;;;;;;' + ('%.2f' % gesamt_betrag) + ';Gesamtbetrag')
-
-    csv_data = '\n'.join(zeilen)
-    return Response(
-        csv_data,
-        mimetype='text/csv',
-        headers={'Content-Disposition': 'attachment; filename=krannutzung_' + str(von) + '_' + str(bis) + '.csv'},
-    )
-
-
-# ---------------------------------------------------------------------------
-# Routen: Baumanagement
-# ---------------------------------------------------------------------------
-
-@app.route('/baumanagement')
-@login_required
-def baumanagement():
-    return render_template('baumanagement.html')
-
-
-# ---------------------------------------------------------------------------
-# Routen: Rechnungen einreichen
-# ---------------------------------------------------------------------------
-
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'xlsx', 'xls', 'doc', 'docx'}
-ONEDRIVE_URL = 'https://emchberger.sharepoint.com/sites/BfBAG_Extern_Versand/_layouts/15/onedrive.aspx?p=26&s=aHR0cHM6Ly9lbWNoYmVyZ2VyLnNoYXJlcG9pbnQuY29tLzpmOi9zL0JmQkFHX0V4dGVybl9WZXJzYW5kL0lnRGJZa0NVcEg4WFRJeTdLZFdKejQ5MkFRZ3hEU2NnOHFDQk41VzcyMW9xVjJR&LOF=1'
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-@app.route('/rechnungen/einreichen', methods=['GET', 'POST'])
-@login_required
-def rechnungen_einreichen():
-    if request.method == 'POST':
-        auftragsnummer = request.form.get('auftragsnummer', '').strip()
-        bkp_nummer = request.form.get('bkp_nummer', '').strip()
-        rechnungstyp = request.form.get('rechnungstyp', '').strip()
-        datei = request.files.get('rechnung_datei')
-
-        if not auftragsnummer or not bkp_nummer or not rechnungstyp:
-            flash('Bitte alle Pflichtfelder ausfüllen.', 'danger')
-            return redirect(url_for('rechnungen_einreichen'))
-
-        dateiname = None
-        if datei and datei.filename and allowed_file(datei.filename):
-            ext = datei.filename.rsplit('.', 1)[1].lower()
-            dateiname = secure_filename(
-                f"{auftragsnummer}_{bkp_nummer}_{rechnungstyp}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{ext}"
-            )
-
-        rechnung = Rechnung(
-            user_id=current_user.id,
-            auftragsnummer=auftragsnummer,
-            bkp_nummer=bkp_nummer,
-            rechnungstyp=rechnungstyp,
-            dateiname=dateiname,
-        )
-        db.session.add(rechnung)
-        db.session.commit()
-
-        return render_template(
-            'rechnungen_bestaetigung.html',
-            rechnung=rechnung,
-            dateiname=dateiname,
-            onedrive_url=ONEDRIVE_URL,
-        )
-
-    return render_template('rechnungen_einreichen.html')
-
-
-@app.route('/rechnungen')
-@login_required
-def rechnungen_liste():
-    if current_user.is_admin():
-        rechnungen = Rechnung.query.order_by(Rechnung.created_at.desc()).all()
-    else:
-        rechnungen = Rechnung.query.filter_by(user_id=current_user.id).order_by(Rechnung.created_at.desc()).all()
-    return render_template('rechnungen_liste.html', rechnungen=rechnungen)
-
-
-# ---------------------------------------------------------------------------
-# CLI: DB initialisieren
-# ---------------------------------------------------------------------------
-
-@app.cli.command('init-db')
-def init_db():
-    """Erstellt alle Tabellen."""
-    db.create_all()
-    print('Datenbank wurde initialisiert.')
-
-
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    buchungen = query.all
