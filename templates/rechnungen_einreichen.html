@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Rechnung einreichen{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none" style="color:var(--kran-primary);">Start</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('baumanagement') }}" class="text-decoration-none" style="color:var(--kran-primary);">Baumanagement</a></li>
+        <li class="breadcrumb-item active">Rechnung einreichen</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-12 col-md-7 col-lg-6">
+
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-receipt" style="color:var(--kran-primary);"></i>
+                <span>Rechnung einreichen</span>
+            </div>
+            <div class="card-body p-4">
+
+                <form method="POST" enctype="multipart/form-data" novalidate>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="auftragsnummer">
+                            Auftragsnummer <span style="color:#e57373;">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="auftragsnummer" name="auftragsnummer"
+                               placeholder="z.B. 2024-001" required autocomplete="off">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="bkp_nummer">
+                            BKP-Nummer <span style="color:#e57373;">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="bkp_nummer" name="bkp_nummer"
+                               placeholder="z.B. 292" required autocomplete="off">
+                        <div class="form-text" style="color:var(--kran-muted);">Baukostenplan-Nummer gemäss Leistungsverzeichnis</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="rechnungstyp">
+                            Rechnungstyp <span style="color:#e57373;">*</span>
+                        </label>
+                        <select class="form-select" id="rechnungstyp" name="rechnungstyp" required>
+                            <option value="" disabled selected>Bitte auswählen…</option>
+                            <option value="Rechnung">Rechnung</option>
+                            <option value="Akonto">Akonto</option>
+                            <option value="Schlussrechnung">Schlussrechnung</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="rechnung_datei">
+                            Rechnung hochladen <span style="color:var(--kran-muted); font-weight:400;">(optional)</span>
+                        </label>
+                        <div id="drop-zone" class="rounded-3 d-flex flex-column align-items-center justify-content-center text-center p-4"
+                             style="border: 2px dashed var(--kran-border); background:var(--kran-bg); cursor:pointer; transition:all 0.15s; min-height:110px;">
+                            <i class="bi bi-cloud-upload" style="font-size:2rem; color:var(--kran-muted);"></i>
+                            <div class="mt-1" style="color:var(--kran-muted); font-size:0.9rem;">Datei hierher ziehen oder <span style="color:var(--kran-primary); text-decoration:underline;">auswählen</span></div>
+                            <div class="small mt-1" style="color:var(--kran-muted);">PDF, Word, Excel, JPG · max. 16 MB</div>
+                            <div id="file-name" class="mt-2 small fw-semibold" style="color:var(--kran-primary); display:none;"></div>
+                        </div>
+                        <input type="file" id="rechnung_datei" name="rechnung_datei"
+                               accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
+                               style="display:none;">
+                    </div>
+
+                    <button type="submit" class="btn w-100 fw-bold py-2"
+                            style="background:var(--kran-primary); color:#fff; border-radius:10px; font-size:1rem;">
+                        <i class="bi bi-send me-2"></i>Rechnung einreichen
+                    </button>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('rechnung_datei');
+const fileName = document.getElementById('file-name');
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--kran-accent)';
+    dropZone.style.background = '#eef8f9';
+});
+dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = 'var(--kran-border)';
+    dropZone.style.background = 'var(--kran-bg)';
+});
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--kran-border)';
+    dropZone.style.background = 'var(--kran-bg)';
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        showFile(e.dataTransfer.files[0].name);
+    }
+});
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) showFile(fileInput.files[0].name);
+});
+function showFile(name) {
+    fileName.textContent = '📎 ' + name;
+    fileName.style.display = 'block';
+    dropZone.style.borderColor = 'var(--kran-accent)';
+}
+</script>
+
+{% endblock %}
