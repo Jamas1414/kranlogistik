@@ -24,14 +24,14 @@
                 <div id="dash-hint" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#556; text-align:center; pointer-events:none;">
                     <i class="bi bi-box" style="font-size:3.5rem; color:#3a5068;"></i>
                     <div class="mt-2" style="font-size:0.95rem; color:#4a6070;">IFC oder 3D-Datei laden</div>
-                    <div class="small mt-1" style="color:#3a5060;">Drag &amp; Drop oder Schaltflaeche oben</div>
+                    <div class="small mt-1" style="color:#3a5060;">Drag &amp; Drop oder Schaltfläche oben</div>
                     <div class="small mt-1" style="color:#2a4050;">IFC &middot; OBJ &middot; STL &middot; GLTF &middot; FBX &middot; ...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- RECHTS: Kategorie-Buttons (nur für normale Benutzer sichtbar auf dieser Position) -->
+    <!-- RECHTS: Kategorie-Buttons -->
     <div class="col-12 col-lg-4 d-flex flex-column gap-3">
         <div class="row g-3 flex-grow-1">
             <div class="col-6 col-lg-12">
@@ -54,7 +54,6 @@
 </div>
 
 {% if current_user.is_admin() %}
-<!-- Admin-Schnellzugriff -->
 <div class="mt-4">
     <div class="d-flex align-items-center gap-2 mb-3">
         <span class="badge px-2 py-1" style="background:rgba(245,158,11,0.15); color:#b45309; font-size:0.75rem; letter-spacing:0.4px;">ADMIN</span>
@@ -107,21 +106,22 @@
 </div>
 {% endif %}
 
-<!-- Online3DViewer -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.css">
 <script src="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.js"></script>
-
 <script>
 var dashViewer = null;
 
 window.addEventListener('load', function () {
-    OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/');
-    var container = document.getElementById('dash-viewer');
-    dashViewer = new OV.EmbedViewer(container, {
-        backgroundColor: new OV.RGBAColor(26, 45, 61, 255),
-        defaultColor: new OV.RGBColor(180, 200, 210),
-        edgeSettings: new OV.EdgeSettings(false, new OV.RGBColor(0, 0, 0), 1)
-    });
+    try {
+        OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/');
+        var container = document.getElementById('dash-viewer');
+        dashViewer = new OV.EmbedViewer(container, {
+            backgroundColor: new OV.RGBAColor(26, 45, 61, 255),
+            defaultColor: new OV.RGBColor(180, 200, 210),
+            edgeSettings: new OV.EdgeSettings(false, new OV.RGBColor(0, 0, 0), 1)
+        });
+        dashViewer.Start();
+    } catch(e) { console.error('Viewer:', e); }
 });
 
 function ladeDashDatei(files) {
@@ -131,7 +131,7 @@ function ladeDashDatei(files) {
 }
 
 document.getElementById('ifc-dash-input').addEventListener('change', function (e) {
-    ladeDashDatei(e.target.files);
+    if (e.target.files.length > 0) ladeDashDatei(e.target.files);
 });
 
 var dropZone = document.getElementById('dash-viewer-wrap');
