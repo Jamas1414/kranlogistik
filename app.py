@@ -275,6 +275,7 @@ def test_login():
     if user is None:
         user = User.query.first()
     if user is None:
+        # Testbenutzer automatisch anlegen
         user = User(
             firma='Testfirma',
             name='Test Admin',
@@ -482,6 +483,16 @@ def buchung_loeschen(booking_id):
     db.session.commit()
     flash('Buchung wurde storniert.', 'success')
     return redirect(url_for('kalender', datum=datum_str))
+
+
+# ---------------------------------------------------------------------------
+# Routen: Baulogistik Uebersicht
+# ---------------------------------------------------------------------------
+
+@app.route('/baulogistik')
+@login_required
+def baulogistik():
+    return render_template('baulogistik.html')
 
 
 # ---------------------------------------------------------------------------
