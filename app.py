@@ -8,6 +8,7 @@ from flask_login import (
     logout_user, current_user
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -15,6 +16,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'bitte-aendern-in-produktion')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'kranlogistik.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -74,6 +76,19 @@ class ParkTicket(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', backref='parktickets')
+
+
+class Rechnung(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    auftragsnummer = db.Column(db.String(50), nullable=False)
+    bkp_nummer = db.Column(db.String(50), nullable=False)
+    rechnungstyp = db.Column(db.String(30), nullable=False)
+    dateiname = db.Column(db.String(255))
+    status = db.Column(db.String(20), default='eingereicht')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='rechnungen')
 
 
 @login_manager.user_loader
@@ -873,6 +888,77 @@ def auswertung_export():
         mimetype='text/csv',
         headers={'Content-Disposition': 'attachment; filename=krannutzung_' + str(von) + '_' + str(bis) + '.csv'},
     )
+
+
+# ---------------------------------------------------------------------------
+# Routen: Baumanagement
+# ---------------------------------------------------------------------------
+
+@app.route('/baumanagement')
+@login_required
+def baumanagement():
+    return render_template('baumanagement.html')
+
+
+# ---------------------------------------------------------------------------
+# Routen: Rechnungen einreichen
+# ---------------------------------------------------------------------------
+
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'xlsx', 'xls', 'doc', 'docx'}
+ONEDRIVE_URL = 'https://emchberger.sharepoint.com/sites/BfBAG_Extern_Versand/_layouts/15/onedrive.aspx?p=26&s=aHR0cHM6Ly9lbWNoYmVyZ2VyLnNoYXJlcG9pbnQuY29tLzpmOi9zL0JmQkFHX0V4dGVybl9WZXJzYW5kL0lnRGJZa0NVcEg4WFRJeTdLZFdKejQ5MkFRZ3hEU2NnOHFDQk41VzcyMW9xVjJR&LOF=1'
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/rechnungen/einreichen', methods=['GET', 'POST'])
+@login_required
+def rechnungen_einreichen():
+    if request.method == 'POST':
+        auftragsnummer = request.form.get('auftragsnummer', '').strip()
+        bkp_nummer = request.form.get('bkp_nummer', '').strip()
+        rechnungstyp = request.form.get('rechnungstyp', '').strip()
+        datei = request.files.get('rechnung_datei')
+
+        if not auftragsnummer or not bkp_nummer or not rechnungstyp:
+            flash('Bitte alle Pflichtfelder ausfüllen.', 'danger')
+            return redirect(url_for('rechnungen_einreichen'))
+
+        dateiname = None
+        if datei and datei.filename and allowed_file(datei.filename):
+            ext = datei.filename.rsplit('.', 1)[1].lower()
+            dateiname = secure_filename(
+                f"{auftragsnummer}_{bkp_nummer}_{rechnungstyp}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.{ext}"
+            )
+
+        rechnung = Rechnung(
+            user_id=current_user.id,
+            auftragsnummer=auftragsnummer,
+            bkp_nummer=bkp_nummer,
+            rechnungstyp=rechnungstyp,
+            dateiname=dateiname,
+        )
+        db.session.add(rechnung)
+        db.session.commit()
+
+        return render_template(
+            'rechnungen_bestaetigung.html',
+            rechnung=rechnung,
+            dateiname=dateiname,
+            onedrive_url=ONEDRIVE_URL,
+        )
+
+    return render_template('rechnungen_einreichen.html')
+
+
+@app.route('/rechnungen')
+@login_required
+def rechnungen_liste():
+    if current_user.is_admin():
+        rechnungen = Rechnung.query.order_by(Rechnung.created_at.desc()).all()
+    else:
+        rechnungen = Rechnung.query.filter_by(user_id=current_user.id).order_by(Rechnung.created_at.desc()).all()
+    return render_template('rechnungen_liste.html', rechnungen=rechnungen)
 
 
 # ---------------------------------------------------------------------------
