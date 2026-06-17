@@ -1,144 +1,184 @@
+/* ============================================================
+   KranLogistik – Pastel Modern Design
+   Palette: Dusty Blue #6b89a5 | Soft Teal #7fc4cb | Sand #f5f0e8
+   ============================================================ */
+
 :root {
-    --bfb-rot: #c8102e;
-    --bfb-rot-dunkel: #a10d25;
-    --bfb-dunkel: #1a1a1a;
+    --kran-primary:  #5b7fa6;
+    --kran-primary2: #4a6b8e;
+    --kran-accent:   #7ec8ce;
+    --kran-accent2:  #5ab0b8;
+    --kran-bg:       #f2f5f9;
+    --kran-card:     #ffffff;
+    --kran-border:   #dde6ef;
+    --kran-text:     #2d3f52;
+    --kran-muted:    #7a90a8;
+    --kran-sand:     #f5f0e8;
 }
 
 body {
-    background-color: #ffffff;
-    color: #2b2b2b;
-    font-family: "Helvetica Neue", Arial, "Segoe UI", sans-serif;
+    background-color: var(--kran-bg);
+    color: var(--kran-text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* Navbar im klaren, hellen BfB-Look */
-.navbar {
-    background-color: #ffffff !important;
-    border-bottom: 3px solid var(--bfb-rot);
+/* ── Navbar ── */
+.kran-navbar {
+    background: linear-gradient(135deg, #5b7fa6 0%, #4a6b8e 100%);
+    border-bottom: 1px solid rgba(126,200,206,0.3);
 }
-.navbar .navbar-brand,
-.navbar .nav-link,
-.navbar .navbar-text {
-    color: var(--bfb-dunkel) !important;
+
+.kran-navbar .navbar-brand {
+    color: #ffffff;
+    font-size: 1.1rem;
+    letter-spacing: 0.3px;
 }
-.navbar .nav-link.active {
-    color: var(--bfb-rot) !important;
+
+.kran-btn-outline {
+    border: 1px solid rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.85);
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    padding: 5px 12px;
+    transition: all 0.15s;
+}
+
+.kran-btn-outline:hover {
+    border-color: rgba(255,255,255,0.7);
+    color: #ffffff;
+    background: rgba(255,255,255,0.12);
+}
+
+.kran-btn-active {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.5);
+    color: #ffffff;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    padding: 5px 12px;
     font-weight: 600;
 }
-.navbar-toggler {
-    border-color: rgba(0,0,0,0.15);
-}
-.navbar-toggler-icon {
-    filter: invert(1);
-}
 
-.navbar-brand {
-    letter-spacing: 0.5px;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-/* Karten */
+/* ── Cards ── */
 .card {
-    border: none;
-    border-radius: 0.5rem;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-
-/* Akzentfarbe Rot statt Orange */
-.list-group-item-warning {
-    background-color: #fdecee;
-    border-left: 4px solid var(--bfb-rot);
-}
-
-.btn-warning,
-.btn-primary {
-    background-color: var(--bfb-rot);
-    border-color: var(--bfb-rot);
-    color: #ffffff;
-    font-weight: 600;
-}
-.btn-warning:hover,
-.btn-warning:focus,
-.btn-primary:hover,
-.btn-primary:focus {
-    background-color: var(--bfb-rot-dunkel);
-    border-color: var(--bfb-rot-dunkel);
-    color: #ffffff;
-}
-
-.btn-outline-light {
-    color: var(--bfb-dunkel);
-    border-color: var(--bfb-dunkel);
-}
-.btn-outline-light:hover {
-    background-color: var(--bfb-dunkel);
-    color: #ffffff;
-}
-
-a {
-    color: var(--bfb-rot);
-}
-a:hover {
-    color: var(--bfb-rot-dunkel);
-}
-
-.badge.bg-warning {
-    background-color: var(--bfb-rot) !important;
-    color: #ffffff !important;
-}
-
-footer {
-    border-top: 1px solid #eee;
-    margin-top: 2rem;
-}
-/* Dashboard */
-.dashboard-tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    background-color: #ffffff;
+    border: 1px solid var(--kran-border);
     border-radius: 14px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    padding: 1.75rem 1rem;
-    height: 100%;
-    color: #212529;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 1px 5px rgba(91,127,166,0.07);
 }
 
-.dashboard-tile:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-    color: #212529;
-}
-
-.dashboard-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.6rem;
-    color: #ffffff;
-    margin-bottom: 0.85rem;
-}
-
-.dashboard-icon.bg-red { background-color: #c8102e; }
-.dashboard-icon.bg-blue { background-color: #0d6efd; }
-.dashboard-icon.bg-green { background-color: #28a745; }
-.dashboard-icon.bg-orange { background-color: #fd7e14; }
-.dashboard-icon.bg-grey { background-color: #6c757d; }
-.dashboard-icon.bg-purple { background-color: #6f42c1; }
-.dashboard-icon.bg-dark { background-color: #343a40; }
-
-.dashboard-label {
+.card-header {
+    background: #ffffff;
+    border-bottom: 1px solid var(--kran-border);
     font-weight: 600;
-    margin-bottom: 0.2rem;
+    border-radius: 14px 14px 0 0 !important;
+    color: var(--kran-text);
 }
 
-.dashboard-sub {
-    font-size: 0.8rem;
-    color: #6c757d;
+/* ── Buttons ── */
+.btn-danger {
+    background-color: var(--kran-accent);
+    border-color: var(--kran-accent);
+    color: #ffffff;
+    font-weight: 600;
 }
+
+.btn-danger:hover {
+    background-color: var(--kran-accent2);
+    border-color: var(--kran-accent2);
+    color: #ffffff;
+}
+
+/* ── List groups ── */
+.list-group-item { border-left: 4px solid transparent; }
+.list-group-item-success { border-left-color: #86c9a0; }
+.list-group-item-danger  { border-left-color: var(--kran-accent); }
+.list-group-item-primary { border-left-color: var(--kran-primary); }
+
+/* ── Belegung ── */
+.belegung-zeit { font-size: 1.05rem; font-weight: 600; min-width: 110px; display: inline-block; }
+.belegung-status { font-size: 0.85rem; padding: 0.2rem 0.55rem; border-radius: 999px; font-weight: 600; }
+.belegung-status.frei   { background: #d4ede2; color: #2d6a4a; }
+.belegung-status.belegt { background: #d6e8f5; color: #1a4f72; }
+.belegung-status.eigene { background: #e8e0f5; color: #4a3080; }
+
+/* ── Dashboard tiles (alt) ── */
+.dashboard-tile {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+    background: var(--kran-card); border-radius: 14px;
+    box-shadow: 0 1px 5px rgba(91,127,166,0.08);
+    padding: 1.75rem 1rem; height: 100%; color: var(--kran-text);
+    transition: transform 0.15s, box-shadow 0.15s;
+    border: 1px solid var(--kran-border);
+}
+.dashboard-tile:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(91,127,166,0.15); color: var(--kran-text); }
+
+.dashboard-icon { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #ffffff; margin-bottom: 0.85rem; }
+.dashboard-icon.bg-red    { background: #f4a7a7; color: #6b2020; }
+.dashboard-icon.bg-blue   { background: var(--kran-primary); }
+.dashboard-icon.bg-green  { background: #86c9a0; color: #1a4a30; }
+.dashboard-icon.bg-orange { background: #f5c07a; color: #6b3f10; }
+.dashboard-icon.bg-grey   { background: #a0b4c4; }
+.dashboard-icon.bg-purple { background: #b5a0d8; color: #2d1a5e; }
+.dashboard-icon.bg-dark   { background: #6b8aa8; }
+.dashboard-icon.bg-teal   { background: var(--kran-accent); color: #1a4a50; }
+
+.dashboard-label { font-weight: 600; margin-bottom: 0.2rem; }
+.dashboard-sub   { font-size: 0.8rem; color: var(--kran-muted); }
+
+/* ── Compact dash-tiles ── */
+.dash-tile {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; text-align: center;
+    background: var(--kran-card); border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(91,127,166,0.07);
+    border: 1px solid var(--kran-border);
+    padding: 1rem 0.5rem; height: 100%; color: var(--kran-text);
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.dash-tile:hover { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(91,127,166,0.14); color: var(--kran-text); border-color: var(--kran-accent); }
+
+.dash-icon { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; color: #ffffff; margin-bottom: 0.6rem; }
+.dash-icon.bg-red    { background: #f4a7a7; color: #6b2020; }
+.dash-icon.bg-blue   { background: var(--kran-primary); }
+.dash-icon.bg-green  { background: #86c9a0; color: #1a4a30; }
+.dash-icon.bg-orange { background: #f5c07a; color: #6b3f10; }
+.dash-icon.bg-grey   { background: #a0b4c4; }
+.dash-icon.bg-purple { background: #b5a0d8; color: #2d1a5e; }
+.dash-icon.bg-dark   { background: #6b8aa8; }
+.dash-icon.bg-teal   { background: var(--kran-accent); color: #1a4a50; }
+
+.dash-label { font-weight: 600; font-size: 0.82rem; margin-bottom: 0.15rem; line-height: 1.2; }
+.dash-sub   { font-size: 0.7rem; color: var(--kran-muted); line-height: 1.2; }
+
+/* ── Grosse Hauptbuttons ── */
+.haupt-btn {
+    border: 2px solid var(--kran-border);
+    background: var(--kran-card);
+    color: var(--kran-muted);
+    border-radius: 14px;
+    font-size: 0.9rem;
+    transition: all 0.18s ease;
+    cursor: pointer;
+    min-height: 110px;
+}
+.haupt-btn:hover { border-color: var(--kran-accent); color: var(--kran-accent2); background: #eef8f9; transform: translateY(-2px); box-shadow: 0 4px 14px rgba(126,200,206,0.2); }
+.haupt-btn-aktiv { border-color: var(--kran-accent) !important; background: var(--kran-accent) !important; color: #ffffff !important; box-shadow: 0 4px 16px rgba(126,200,206,0.35); }
+
+/* ── Stat-Boxen ── */
+.stat-box   { background: var(--kran-bg); border-radius: 10px; padding: 10px 12px; }
+.stat-label { font-size: 0.7rem; color: var(--kran-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.stat-value { font-size: 1.15rem; font-weight: 700; color: var(--kran-text); line-height: 1.2; }
+.stat-sub   { font-size: 0.7rem; color: #a0b4c4; margin-top: 1px; }
+
+/* ── User Avatar ── */
+.user-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--kran-primary); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; font-weight: 700; flex-shrink: 0; }
+
+/* ── Kategorie-Buttons (compat) ── */
+.kategorie-btn { border: 2px solid var(--kran-border); background: var(--kran-card); color: var(--kran-muted); border-radius: 10px; padding: 10px 12px; font-size: 0.875rem; font-weight: 600; transition: all 0.18s ease; cursor: pointer; }
+.kategorie-btn:hover { border-color: var(--kran-accent); color: var(--kran-accent2); background: #eef8f9; }
+.kategorie-btn-active { border-color: var(--kran-accent) !important; background: var(--kran-accent) !important; color: #ffffff !important; }
+
+/* ── BfB Badge (compat) ── */
+.bfb-badge { background: var(--kran-accent); color: #ffffff; border-radius: 6px; padding: 2px 8px; font-size: 0.85rem; font-weight: 800; letter-spacing: 0.5px; }
