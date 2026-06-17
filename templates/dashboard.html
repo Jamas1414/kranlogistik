@@ -5,8 +5,8 @@
 <div class="row g-3" style="min-height: calc(100vh - 80px);">
 
     <!-- LINKS: IFC Viewer -->
-    <div class="col-12 col-lg-7">
-        <div class="card h-100 p-0" style="overflow:hidden; min-height: 420px;">
+    <div class="col-12 col-lg-8">
+        <div class="card h-100 p-0" style="overflow:hidden; min-height: 460px;">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span class="fw-semibold"><i class="bi bi-box me-1"></i> 3D Modell Viewer</span>
                 <div class="d-flex gap-2">
@@ -19,180 +19,42 @@
                 </div>
                 <input type="file" id="ifc-dash-input" accept=".ifc,.obj,.stl,.gltf,.glb,.fbx,.3ds,.dae,.ply,.off" style="display:none">
             </div>
-            <div id="dash-viewer-wrap" style="height: calc(100% - 54px); min-height: 380px; background:#1a1a2e; position:relative;">
+            <div id="dash-viewer-wrap" style="height: calc(100% - 54px); min-height: 420px; background:#1a2d3d; position:relative;">
                 <div id="dash-viewer" style="width:100%; height:100%;"></div>
-                <div id="dash-hint" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#555; text-align:center; pointer-events:none;">
-                    <i class="bi bi-box" style="font-size:3.5rem; color:#333;"></i>
-                    <div class="mt-2" style="font-size:0.95rem; color:#666;">IFC oder 3D-Datei laden</div>
-                    <div class="small mt-1" style="color:#444;">Drag &amp; Drop oder Schaltflaeche oben</div>
-                    <div class="small mt-1" style="color:#3a3a5c;">IFC &middot; OBJ &middot; STL &middot; GLTF &middot; FBX &middot; ...</div>
+                <div id="dash-hint" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#556; text-align:center; pointer-events:none;">
+                    <i class="bi bi-box" style="font-size:3.5rem; color:#3a5068;"></i>
+                    <div class="mt-2" style="font-size:0.95rem; color:#4a6070;">IFC oder 3D-Datei laden</div>
+                    <div class="small mt-1" style="color:#3a5060;">Drag &amp; Drop oder Schaltflaeche oben</div>
+                    <div class="small mt-1" style="color:#2a4050;">IFC &middot; OBJ &middot; STL &middot; GLTF &middot; FBX &middot; ...</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- RECHTS: User-Block + Navigation -->
-    <div class="col-12 col-lg-5 d-flex flex-column gap-3">
+    <!-- RECHTS: Kategorie-Buttons -->
+    <div class="col-12 col-lg-4 d-flex flex-column gap-3">
 
-        <!-- User-Karte -->
-        <div class="card">
-            <div class="card-body pb-3">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="user-avatar me-3">
-                        {{ current_user.name[0] | upper }}
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-bold fs-6">{{ current_user.name }}</div>
-                        <div class="text-muted small">{{ current_user.firma }}</div>
-                        {% if current_user.is_admin() %}
-                        <span class="badge mt-1" style="background:#c8102e; font-size:0.65rem;">Administrator</span>
-                        {% endif %}
-                    </div>
-                    <div class="text-end text-muted small">
-                        <i class="bi bi-calendar3 me-1"></i>
-                        <span id="datum-heute"></span>
-                    </div>
-                </div>
-
-                <div class="row g-2 mb-3">
-                    <div class="col-6">
-                        <div class="stat-box">
-                            <div class="stat-label"><i class="bi bi-truck me-1"></i>Naechste Buchung</div>
-                            {% if naechste_buchung %}
-                            <div class="stat-value">{{ naechste_buchung.datum.strftime('%d.%m.%Y') }}</div>
-                            <div class="stat-sub">{{ naechste_buchung.start_zeit.strftime('%H:%M') }} &ndash; {{ naechste_buchung.end_zeit.strftime('%H:%M') }} Uhr</div>
-                            {% else %}
-                            <div class="stat-value text-muted" style="font-size:0.85rem;">Keine geplant</div>
-                            <div class="stat-sub">&nbsp;</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="stat-box">
-                            <div class="stat-label"><i class="bi bi-p-square me-1"></i>Parktickets aktiv</div>
-                            <div class="stat-value" style="color:{% if aktive_tickets > 0 %}#0d6efd{% else %}#6c757d{% endif %};">
-                                {{ aktive_tickets }}
-                            </div>
-                            <div class="stat-sub">ab heute</div>
-                        </div>
-                    </div>
-                </div>
-
-                {% if letzte_buchung %}
-                <div class="text-muted small mb-3" style="background:#f8f9fa; border-radius:8px; padding:8px 12px;">
-                    <i class="bi bi-clock-history me-1"></i>
-                    Letzte Aktivitaet: {{ letzte_buchung.datum.strftime('%d.%m.%Y') }},
-                    {{ letzte_buchung.start_zeit.strftime('%H:%M') }}&ndash;{{ letzte_buchung.end_zeit.strftime('%H:%M') }} Uhr
-                </div>
-                {% endif %}
-
-                <a href="{{ url_for('kalender') }}" class="btn btn-danger w-100 fw-semibold">
-                    <i class="bi bi-plus-circle me-1"></i> Kran buchen
+        <div class="row g-3 flex-grow-1">
+            <div class="col-6 col-lg-12">
+                <a href="#" class="haupt-btn w-100 d-flex flex-column align-items-center justify-content-center gap-2 py-4 text-decoration-none">
+                    <i class="bi bi-building" style="font-size:2.5rem;"></i>
+                    <span class="fw-bold" style="font-size:1rem;">Baumanagement</span>
+                    <span class="small" style="opacity:0.6; font-weight:400;">Demnächst</span>
                 </a>
             </div>
-        </div>
-
-        <!-- Kategorie-Navigation -->
-        <div class="card flex-grow-1">
-            <div class="card-body p-3 d-flex flex-column">
-
-                <div class="d-flex gap-2 mb-3">
-                    <button id="btn-baumanagement" onclick="switchTab('baumanagement')"
-                        class="kategorie-btn flex-fill">
-                        <i class="bi bi-building me-1"></i> Baumanagement
-                    </button>
-                    <button id="btn-baulogistik" onclick="switchTab('baulogistik')"
-                        class="kategorie-btn kategorie-btn-active flex-fill">
-                        <i class="bi bi-boxes me-1"></i> Baulogistik
-                    </button>
-                </div>
-
-                <div id="tab-baumanagement" style="display:none;" class="flex-grow-1 d-flex align-items-center justify-content-center">
-                    <div class="text-center text-muted py-3">
-                        <i class="bi bi-building" style="font-size:2.8rem; color:#ddd;"></i>
-                        <div class="mt-2 fw-semibold">Baumanagement</div>
-                        <div class="small mt-1">Demnachst verfuegbar</div>
-                    </div>
-                </div>
-
-                <div id="tab-baulogistik" class="flex-grow-1">
-                    <div class="row g-2">
-
-                        <div class="col-6">
-                            <a href="{{ url_for('kalender') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-red"><i class="bi bi-truck"></i></div>
-                                <div class="dash-label">Kran buchen</div>
-                                <div class="dash-sub">Kalender &amp; Reservierung</div>
-                            </a>
-                        </div>
-
-                        <div class="col-6">
-                            <a href="{{ url_for('parkplatz') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-blue"><i class="bi bi-p-square"></i></div>
-                                <div class="dash-label">Parkplatz</div>
-                                <div class="dash-sub">Tagesticket loesen</div>
-                            </a>
-                        </div>
-
-                        <div class="col-6">
-                            <a href="{{ url_for('meine_buchungen') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-green"><i class="bi bi-card-checklist"></i></div>
-                                <div class="dash-label">Meine Buchungen</div>
-                                <div class="dash-sub">Uebersicht &amp; Stornieren</div>
-                            </a>
-                        </div>
-
-                        <div class="col-6">
-                            <a href="{{ url_for('auswertung') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-orange"><i class="bi bi-bar-chart-line"></i></div>
-                                <div class="dash-label">Auswertung</div>
-                                <div class="dash-sub">Kosten &amp; Statistik</div>
-                            </a>
-                        </div>
-
-                        <div class="col-6">
-                            <a href="{{ url_for('anfahrt') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-grey"><i class="bi bi-signpost-2"></i></div>
-                                <div class="dash-label">Anfahrt</div>
-                                <div class="dash-sub">Lageplan &amp; Hinweise</div>
-                            </a>
-                        </div>
-
-                        <div class="col-6">
-                            <a href="{{ url_for('modell') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-teal"><i class="bi bi-box"></i></div>
-                                <div class="dash-label">3D Modell</div>
-                                <div class="dash-sub">Vollbild-Viewer</div>
-                            </a>
-                        </div>
-
-                        {% if current_user.is_admin() %}
-                        <div class="col-6">
-                            <a href="{{ url_for('parkplatz_pruefung') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-purple"><i class="bi bi-search"></i></div>
-                                <div class="dash-label">Pruefung</div>
-                                <div class="dash-sub">Parkplatz-Kontrolle</div>
-                            </a>
-                        </div>
-
-                        <div class="col-6">
-                            <a href="{{ url_for('admin') }}" class="dash-tile text-decoration-none">
-                                <div class="dash-icon bg-dark"><i class="bi bi-gear"></i></div>
-                                <div class="dash-label">Administration</div>
-                                <div class="dash-sub">Benutzer &amp; Einst.</div>
-                            </a>
-                        </div>
-                        {% endif %}
-
-                    </div>
-                </div>
-
+            <div class="col-6 col-lg-12">
+                <a href="{{ url_for('baulogistik') }}" class="haupt-btn haupt-btn-aktiv w-100 d-flex flex-column align-items-center justify-content-center gap-2 py-4 text-decoration-none">
+                    <i class="bi bi-boxes" style="font-size:2.5rem;"></i>
+                    <span class="fw-bold" style="font-size:1rem;">Baulogistik</span>
+                    <span class="small" style="opacity:0.75; font-weight:400;">Kran &middot; Parking &middot; mehr</span>
+                </a>
             </div>
         </div>
 
     </div>
 </div>
 
+<!-- Online3DViewer -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.css">
 <script src="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.js"></script>
 
@@ -203,8 +65,8 @@ window.addEventListener('load', function () {
     OV.SetExternalLibLocation('https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/');
     var container = document.getElementById('dash-viewer');
     dashViewer = new OV.EmbedViewer(container, {
-        backgroundColor: new OV.RGBAColor(26, 26, 46, 255),
-        defaultColor: new OV.RGBColor(200, 200, 200),
+        backgroundColor: new OV.RGBAColor(26, 45, 61, 255),
+        defaultColor: new OV.RGBColor(180, 200, 210),
         edgeSettings: new OV.EdgeSettings(false, new OV.RGBColor(0, 0, 0), 1)
     });
 });
@@ -225,25 +87,6 @@ dropZone.addEventListener('drop', function (e) {
     e.preventDefault(); e.stopPropagation();
     if (e.dataTransfer.files.length > 0) ladeDashDatei(e.dataTransfer.files);
 });
-
-function switchTab(tab) {
-    var tabs = ['baumanagement', 'baulogistik'];
-    tabs.forEach(function(t) {
-        document.getElementById('tab-' + t).style.display = (t === tab) ? '' : 'none';
-        var btn = document.getElementById('btn-' + t);
-        if (t === tab) {
-            btn.classList.add('kategorie-btn-active');
-        } else {
-            btn.classList.remove('kategorie-btn-active');
-        }
-    });
-}
-
-var heute = new Date();
-var tage = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
-var monate = ['Jan','Feb','Maer','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
-document.getElementById('datum-heute').textContent =
-    tage[heute.getDay()] + ', ' + heute.getDate() + '. ' + monate[heute.getMonth()];
 </script>
 
 {% endblock %}
