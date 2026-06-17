@@ -31,9 +31,8 @@
         </div>
     </div>
 
-    <!-- RECHTS: Kategorie-Buttons -->
+    <!-- RECHTS: Kategorie-Buttons (nur für normale Benutzer sichtbar auf dieser Position) -->
     <div class="col-12 col-lg-4 d-flex flex-column gap-3">
-
         <div class="row g-3 flex-grow-1">
             <div class="col-6 col-lg-12">
                 <a href="{{ url_for('baumanagement') }}" class="haupt-btn w-100 d-flex flex-column align-items-center justify-content-center gap-2 py-4 text-decoration-none">
@@ -50,9 +49,63 @@
                 </a>
             </div>
         </div>
+    </div>
 
+</div>
+
+{% if current_user.is_admin() %}
+<!-- Admin-Schnellzugriff -->
+<div class="mt-4">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="badge px-2 py-1" style="background:rgba(245,158,11,0.15); color:#b45309; font-size:0.75rem; letter-spacing:0.4px;">ADMIN</span>
+        <span class="small fw-semibold" style="color:var(--kran-muted);">Schnellzugriff</span>
+    </div>
+    <div class="row g-3">
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{{ url_for('baulogistik') }}" class="dashboard-tile text-decoration-none">
+                <div class="dashboard-icon bg-teal"><i class="bi bi-boxes"></i></div>
+                <div class="dashboard-label">Baulogistik</div>
+                <div class="dashboard-sub">Kran &amp; Parkplatz</div>
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{{ url_for('baumanagement') }}" class="dashboard-tile text-decoration-none">
+                <div class="dashboard-icon bg-blue"><i class="bi bi-building"></i></div>
+                <div class="dashboard-label">Baumanagement</div>
+                <div class="dashboard-sub">Rechnungen &amp; mehr</div>
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{{ url_for('parkplatz_pruefung') }}" class="dashboard-tile text-decoration-none">
+                <div class="dashboard-icon bg-purple"><i class="bi bi-search"></i></div>
+                <div class="dashboard-label">Parkplatz-Prüfung</div>
+                <div class="dashboard-sub">Kontrolle</div>
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{{ url_for('admin') }}" class="dashboard-tile text-decoration-none">
+                <div class="dashboard-icon bg-dark"><i class="bi bi-gear"></i></div>
+                <div class="dashboard-label">Administration</div>
+                <div class="dashboard-sub">Benutzer &amp; Einst.</div>
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{{ url_for('rechnungen_liste') }}" class="dashboard-tile text-decoration-none">
+                <div class="dashboard-icon bg-orange"><i class="bi bi-receipt"></i></div>
+                <div class="dashboard-label">Alle Rechnungen</div>
+                <div class="dashboard-sub">Eingereichte Docs</div>
+            </a>
+        </div>
+        <div class="col-6 col-sm-4 col-lg-3">
+            <a href="{{ url_for('auswertung') }}" class="dashboard-tile text-decoration-none">
+                <div class="dashboard-icon bg-green"><i class="bi bi-bar-chart-line"></i></div>
+                <div class="dashboard-label">Auswertung</div>
+                <div class="dashboard-sub">Kosten &amp; Statistik</div>
+            </a>
+        </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Online3DViewer -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/online-3d-viewer@0.8.18/build/o3dv.min.css">
