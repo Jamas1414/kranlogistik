@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#1a2332">
-    <title>{% block title %}KranLogistik{% endblock %} - Baustellenlogistik</title>
+    <title>{% block title %}BauPilot{% endblock %} - Baustellenlogistik</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
@@ -17,25 +17,24 @@
 
         <!-- Logo + Brand -->
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="{{ url_for('index') }}">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+            <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+                <rect width="34" height="34" rx="9" fill="rgba(255,255,255,0.15)"/>
                 <!-- Mast -->
-                <rect x="14" y="10" width="4" height="18" rx="1" fill="#7ec8ce"/>
+                <rect x="15" y="11" width="4" height="19" rx="1" fill="#ffffff"/>
                 <!-- Ausleger -->
-                <rect x="4" y="10" width="24" height="3.5" rx="1" fill="#7ec8ce"/>
-                <!-- Gegenausleger oben -->
-                <rect x="4" y="6" width="10" height="2.5" rx="1" fill="#a8dde2"/>
+                <rect x="6" y="11" width="22" height="3.5" rx="1" fill="#ffffff"/>
+                <!-- Gegenausleger -->
+                <rect x="6" y="7" width="9" height="2.5" rx="1" fill="rgba(255,255,255,0.55)"/>
                 <!-- Diagonale -->
-                <line x1="14" y1="10" x2="5" y2="13.5" stroke="#a8dde2" stroke-width="1.5"/>
+                <line x1="15" y1="11" x2="7" y2="14.5" stroke="rgba(255,255,255,0.45)" stroke-width="1.5" stroke-linecap="round"/>
                 <!-- Haengeseil -->
-                <line x1="24" y1="13.5" x2="21" y2="22" stroke="#a8dde2" stroke-width="1.5" stroke-dasharray="2 1.5"/>
+                <line x1="24" y1="14.5" x2="22" y2="23" stroke="rgba(255,255,255,0.65)" stroke-width="1.5" stroke-dasharray="2 1.5" stroke-linecap="round"/>
                 <!-- Haken -->
-                <rect x="19.5" y="22" width="3" height="3" rx="1" fill="none" stroke="#7ec8ce" stroke-width="1.5"/>
+                <rect x="20" y="23" width="4" height="4" rx="1" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5"/>
                 <!-- Sockel -->
-                <rect x="12" y="27" width="8" height="2.5" rx="1" fill="#a8dde2"/>
-                <!-- Raeupchen -->
-                <rect x="10" y="29" width="12" height="2" rx="1" fill="#5ab0b8"/>
+                <rect x="13" y="29" width="8" height="2.5" rx="1" fill="rgba(255,255,255,0.5)"/>
             </svg>
-            <span class="d-none d-sm-inline" style="letter-spacing:0.3px;">KranLogistik</span>
+            <span style="letter-spacing:0.3px; font-size:1.05rem;">BauPilot</span>
         </a>
 
         <div class="d-flex align-items-center gap-2 gap-sm-3">
