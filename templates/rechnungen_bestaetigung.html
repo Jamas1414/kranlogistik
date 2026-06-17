@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Rechnung eingereicht{% endblock %}
+{% block content %}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-12 col-md-7 col-lg-6">
+        <div class="card text-center">
+            <div class="card-body p-5">
+
+                <div style="width:72px; height:72px; border-radius:50%; background:#d4ede2; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
+                    <i class="bi bi-check-lg" style="font-size:2rem; color:#2d6a4a;"></i>
+                </div>
+
+                <h4 class="fw-bold mb-1" style="color:var(--kran-text);">Rechnung erfasst!</h4>
+                <p class="mb-4" style="color:var(--kran-muted);">Ihre Angaben wurden gespeichert.</p>
+
+                <div class="text-start rounded-3 p-3 mb-4" style="background:var(--kran-bg); border:1px solid var(--kran-border);">
+                    <div class="row g-2 small">
+                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">Auftragsnummer</div>
+                        <div class="col-6">{{ rechnung.auftragsnummer }}</div>
+                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">BKP-Nummer</div>
+                        <div class="col-6">{{ rechnung.bkp_nummer }}</div>
+                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">Typ</div>
+                        <div class="col-6">{{ rechnung.rechnungstyp }}</div>
+                        {% if dateiname %}
+                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">Dateiname</div>
+                        <div class="col-6 text-break" style="font-size:0.78rem;">{{ dateiname }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if dateiname %}
+                <div class="alert d-flex align-items-start gap-2 text-start mb-4"
+                     style="background:#fff8e1; border:1px solid #f5c07a; border-radius:10px; color:#5a3e10;">
+                    <i class="bi bi-cloud-upload mt-1" style="flex-shrink:0;"></i>
+                    <div>
+                        <div class="fw-semibold mb-1">Datei bitte in OneDrive hochladen</div>
+                        <div class="small">Benennen Sie die Datei <strong>{{ dateiname }}</strong> und laden Sie sie in den freigegebenen Ordner hoch:</div>
+                    </div>
+                </div>
+                <a href="{{ onedrive_url }}" target="_blank" rel="noopener"
+                   class="btn w-100 fw-bold py-2 mb-3"
+                   style="background:var(--kran-accent); color:#fff; border-radius:10px;">
+                    <i class="bi bi-box-arrow-up-right me-2"></i>OneDrive-Ordner öffnen
+                </a>
+                {% endif %}
+
+                <a href="{{ url_for('baumanagement') }}" class="btn w-100 py-2"
+                   style="background:var(--kran-bg); color:var(--kran-text); border:1px solid var(--kran-border); border-radius:10px;">
+                    <i class="bi bi-arrow-left me-2"></i>Zurück zu Baumanagement
+                </a>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
