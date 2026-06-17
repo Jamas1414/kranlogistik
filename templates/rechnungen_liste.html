@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Meine Rechnungen{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none" style="color:var(--kran-primary);">Start</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('baumanagement') }}" class="text-decoration-none" style="color:var(--kran-primary);">Baumanagement</a></li>
+        <li class="breadcrumb-item active">Rechnungen</li>
+    </ol>
+</nav>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <div style="width:48px;height:48px;border-radius:14px;background:var(--kran-primary);display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-card-list" style="font-size:1.5rem;color:#fff;"></i>
+        </div>
+        <div>
+            <h4 class="mb-0 fw-bold" style="color:var(--kran-text);">{% if current_user.is_admin() %}Alle Rechnungen{% else %}Meine Rechnungen{% endif %}</h4>
+            <div class="small" style="color:var(--kran-muted);">{{ rechnungen|length }} Einträge</div>
+        </div>
+    </div>
+    <a href="{{ url_for('rechnungen_einreichen') }}" class="btn btn-sm fw-semibold"
+       style="background:var(--kran-primary);color:#fff;border-radius:8px;">
+        <i class="bi bi-plus-lg me-1"></i>Neue Rechnung
+    </a>
+</div>
+
+{% if rechnungen %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead style="background:var(--kran-bg); color:var(--kran-muted); font-size:0.8rem; text-transform:uppercase; letter-spacing:0.4px;">
+                <tr>
+                    {% if current_user.is_admin() %}
+                    <th class="ps-3">Firma</th>
+                    {% endif %}
+                    <th>Auftrag</th>
+                    <th>BKP</th>
+                    <th>Typ</th>
+                    <th>Datei</th>
+                    <th>Datum</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in rechnungen %}
+            <tr>
+                {% if current_user.is_admin() %}
+                <td class="ps-3 small fw-semibold" style="color:var(--kran-text);">{{ r.user.firma }}</td>
+                {% endif %}
+                <td class="fw-semibold">{{ r.auftragsnummer }}</td>
+                <td style="color:var(--kran-muted);">{{ r.bkp_nummer }}</td>
+                <td>
+                    <span class="badge rounded-pill"
+                          style="background:{% if r.rechnungstyp == 'Schlussrechnung' %}#d6e8f5;color:#1a4f72{% elif r.rechnungstyp == 'Akonto' %}#e8e0f5;color:#4a3080{% else %}#d4ede2;color:#2d6a4a{% endif %};">
+                        {{ r.rechnungstyp }}
+                    </span>
+                </td>
+                <td class="small" style="color:var(--kran-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    {% if r.dateiname %}<i class="bi bi-paperclip me-1"></i>{{ r.dateiname }}{% else %}<span style="opacity:0.4;">—</span>{% endif %}
+                </td>
+                <td class="small" style="color:var(--kran-muted);">{{ r.created_at.strftime('%d.%m.%Y') }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5" style="color:var(--kran-muted);">
+    <i class="bi bi-inbox" style="font-size:3rem; opacity:0.3;"></i>
+    <div class="mt-2">Noch keine Rechnungen eingereicht.</div>
+    <a href="{{ url_for('rechnungen_einreichen') }}" class="btn btn-sm mt-3"
+       style="background:var(--kran-primary);color:#fff;border-radius:8px;">Erste Rechnung einreichen</a>
+</div>
+{% endif %}
+
+{% endblock %}
