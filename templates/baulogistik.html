@@ -34,7 +34,7 @@
         <a href="{{ url_for('parkplatz') }}" class="dashboard-tile text-decoration-none">
             <div class="dashboard-icon bg-teal"><i class="bi bi-p-square"></i></div>
             <div class="dashboard-label">Parkplatz</div>
-            <div class="dashboard-sub">Tagesticket loesen</div>
+            <div class="dashboard-sub">Tagesticket lösen</div>
         </a>
     </div>
 
@@ -42,7 +42,7 @@
         <a href="{{ url_for('meine_buchungen') }}" class="dashboard-tile text-decoration-none">
             <div class="dashboard-icon bg-green"><i class="bi bi-card-checklist"></i></div>
             <div class="dashboard-label">Meine Buchungen</div>
-            <div class="dashboard-sub">Uebersicht &amp; Stornieren</div>
+            <div class="dashboard-sub">Übersicht &amp; Stornieren</div>
         </a>
     </div>
 
@@ -62,23 +62,7 @@
         </a>
     </div>
 
-    <div class="col-6 col-sm-4 col-lg-3">
-        <a href="{{ url_for('modell') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon" style="background:var(--kran-accent);"><i class="bi bi-box" style="color:#fff;"></i></div>
-            <div class="dashboard-label">3D Modell</div>
-            <div class="dashboard-sub">Vollbild-Viewer</div>
-        </a>
-    </div>
-
     {% if current_user.is_admin() %}
-    <div class="col-6 col-sm-4 col-lg-3">
-        <a href="{{ url_for('parkplatz_pruefung') }}" class="dashboard-tile text-decoration-none">
-            <div class="dashboard-icon bg-purple"><i class="bi bi-search"></i></div>
-            <div class="dashboard-label">Pruefung</div>
-            <div class="dashboard-sub">Parkplatz-Kontrolle</div>
-        </a>
-    </div>
-
     <div class="col-6 col-sm-4 col-lg-3">
         <a href="{{ url_for('admin') }}" class="dashboard-tile text-decoration-none">
             <div class="dashboard-icon bg-dark"><i class="bi bi-gear"></i></div>
