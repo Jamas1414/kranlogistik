@@ -20,10 +20,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'bitte-aendern-in-produk
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'kranlogistik.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB max
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-    'connect_args': {'timeout': 30, 'check_same_thread': False},
-    'pool_pre_ping': True,
-}
+
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -1045,10 +1042,11 @@ def rechnungen_einreichen():
                 flash('Datei konnte nicht gespeichert werden: ' + str(e), 'warning')
 
         # Fortlaufende Nummer pro Firmenname
-        letzte_nr = db.session.query(db.func.max(Rechnung.rechnung_nr)).filter(
-            Rechnung.firmenname == firmenname
+        from sqlalchemy import select, func as sqlfunc
+        letzte_nr = db.session.execute(
+            select(sqlfunc.max(Rechnung.rechnung_nr)).where(Rechnung.firmenname == firmenname)
         ).scalar() or 0
-        naechste_nr = letzte_nr + 1
+        naechste_nr = int(letzte_nr) + 1
 
         rechnung = Rechnung(
             user_id=current_user.id,
@@ -1247,6 +1245,26 @@ def admin_buchung_loeschen(booking_id):
 def too_large(e):
     flash('Die Datei ist zu gross (max. 100 MB). Bitte eine kleinere Datei hochladen.', 'danger')
     return redirect(request.referrer or url_for('index'))
+
+
+
+
+@app.route('/service-worker.js')
+def service_worker():
+    sw_js = (
+        "self.addEventListener('install', function(e) { self.skipWaiting(); });\n"
+        "self.addEventListener('activate', function(e) {\n"
+        "    e.waitUntil(\n"
+        "        self.registration.unregister().then(function() {\n"
+        "            return self.clients.matchAll();\n"
+        "        }).then(function(clients) {\n"
+        "            clients.forEach(function(c) { c.navigate(c.url); });\n"
+        "        })\n"
+        "    );\n"
+        "});\n"
+    )
+    from flask import Response
+    return Response(sw_js, mimetype='application/javascript')
 
 
 if __name__ == '__main__':
