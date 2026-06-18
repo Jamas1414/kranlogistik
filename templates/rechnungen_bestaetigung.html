@@ -2,57 +2,57 @@
 {% block title %}Rechnung eingereicht{% endblock %}
 {% block content %}
 
-<div class="row justify-content-center mt-4">
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none" style="color:var(--kran-primary);">Start</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('baumanagement') }}" class="text-decoration-none" style="color:var(--kran-primary);">Baumanagement</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('rechnungen_liste') }}" class="text-decoration-none" style="color:var(--kran-primary);">Rechnungen</a></li>
+        <li class="breadcrumb-item active">Bestätigung</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
     <div class="col-12 col-md-7 col-lg-6">
-        <div class="card text-center">
-            <div class="card-body p-5">
 
-                <div style="width:72px; height:72px; border-radius:50%; background:#d4ede2; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
-                    <i class="bi bi-check-lg" style="font-size:2rem; color:#2d6a4a;"></i>
-                </div>
-
-                <h4 class="fw-bold mb-1" style="color:var(--kran-text);">Rechnung erfasst!</h4>
-                <p class="mb-4" style="color:var(--kran-muted);">Ihre Angaben wurden gespeichert.</p>
-
-                <div class="text-start rounded-3 p-3 mb-4" style="background:var(--kran-bg); border:1px solid var(--kran-border);">
-                    <div class="row g-2 small">
-                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">Auftragsnummer</div>
-                        <div class="col-6">{{ rechnung.auftragsnummer }}</div>
-                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">BKP-Nummer</div>
-                        <div class="col-6">{{ rechnung.bkp_nummer }}</div>
-                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">Typ</div>
-                        <div class="col-6">{{ rechnung.rechnungstyp }}</div>
-                        {% if dateiname %}
-                        <div class="col-6 fw-semibold" style="color:var(--kran-muted);">Dateiname</div>
-                        <div class="col-6 text-break" style="font-size:0.78rem;">{{ dateiname }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                {% if dateiname %}
-                <div class="alert d-flex align-items-start gap-2 text-start mb-4"
-                     style="background:#fff8e1; border:1px solid #f5c07a; border-radius:10px; color:#5a3e10;">
-                    <i class="bi bi-cloud-upload mt-1" style="flex-shrink:0;"></i>
-                    <div>
-                        <div class="fw-semibold mb-1">Datei bitte in OneDrive hochladen</div>
-                        <div class="small">Benennen Sie die Datei <strong>{{ dateiname }}</strong> und laden Sie sie in den freigegebenen Ordner hoch:</div>
-                    </div>
-                </div>
-                <a href="{{ onedrive_url }}" target="_blank" rel="noopener"
-                   class="btn w-100 fw-bold py-2 mb-3"
-                   style="background:var(--kran-accent); color:#fff; border-radius:10px;">
-                    <i class="bi bi-box-arrow-up-right me-2"></i>OneDrive-Ordner öffnen
-                </a>
-                {% endif %}
-
-                <a href="{{ url_for('baumanagement') }}" class="btn w-100 py-2"
-                   style="background:var(--kran-bg); color:var(--kran-text); border:1px solid var(--kran-border); border-radius:10px;">
-                    <i class="bi bi-arrow-left me-2"></i>Zurück zu Baumanagement
-                </a>
-
+        <!-- Success header -->
+        <div class="text-center mb-4">
+            <div class="d-inline-flex align-items-center justify-content-center mb-3"
+                 style="width:72px;height:72px;border-radius:50%;background:#e8f5ee;">
+                <i class="bi bi-check-lg" style="font-size:2.2rem;color:#2d9e6b;"></i>
             </div>
+            <h4 class="fw-bold mb-1">Rechnung eingereicht!</h4>
+            <p class="text-muted mb-0">Ihre Rechnung wurde erfolgreich übermittelt.</p>
         </div>
-    </div>
-</div>
 
-{% endblock %}
+        <!-- Details card -->
+        <div class="card shadow-sm mb-3">
+            <div class="card-header py-3 px-4" style="background:white;">
+                <span class="fw-semibold"><i class="bi bi-receipt me-2" style="color:var(--kran-primary);"></i>Details</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <td class="ps-4 py-3 text-muted small" style="width:40%;">Firmenname</td>
+                            <td class="py-3 fw-semibold">{{ rechnung.firmenname or '—' }}</td>
+                        </tr>
+                        {% if rechnung.bkp_nummer %}
+                        <tr>
+                            <td class="ps-4 py-3 text-muted small">BKP-Nummer</td>
+                            <td class="py-3">{{ rechnung.bkp_nummer }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if rechnung.vertragsnummer %}
+                        <tr>
+                            <td class="ps-4 py-3 text-muted small">Vertragsnummer</td>
+                            <td class="py-3">{{ rechnung.vertragsnummer }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="ps-4 py-3 text-muted small">Rechnungstyp</td>
+                            <td class="py-3">
+                                <span class="badge rounded-pill"
+                                      style="background:{% if rechnung.rechnungstyp == 'Schlussrechnung' %}#d6e8f5;color:#1a4f72{% elif rechnung.rechnungstyp == 'Akonto' %}#e8e0f5;color:#4a3080{% else %}#d4ede2;color:#2d6a4a{% endif %};">
+                                    {{ rechnung.rechnungstyp }}
+                                </span>
+     
