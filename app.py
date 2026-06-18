@@ -93,6 +93,7 @@ class Rechnung(db.Model):
     vertragsnummer = db.Column(db.String(50), nullable=True)
     auftragsnummer = db.Column(db.String(50), nullable=True)  # kept for backward compat
     rechnungstyp = db.Column(db.String(30), nullable=False)
+    rechnung_nr = db.Column(db.Integer, nullable=True)  # sequential per firmenname
     dateiname = db.Column(db.String(255))
     dateiname_neu = db.Column(db.String(255))
     datei_pfad = db.Column(db.String(500))
@@ -252,6 +253,7 @@ def _ensure_db():
             'ALTER TABLE rechnung ADD COLUMN vertragsnummer VARCHAR(50)',
             'ALTER TABLE rechnung ADD COLUMN dateiname_neu VARCHAR(255)',
             'ALTER TABLE rechnung ADD COLUMN datei_pfad VARCHAR(500)',
+            'ALTER TABLE rechnung ADD COLUMN rechnung_nr INTEGER',
         ]:
             try:
                 with db.engine.connect() as _conn:
@@ -1042,6 +1044,12 @@ def rechnungen_einreichen():
                 datei_pfad = None
                 flash('Datei konnte nicht gespeichert werden: ' + str(e), 'warning')
 
+        # Fortlaufende Nummer pro Firmenname
+        letzte_nr = db.session.query(db.func.max(Rechnung.rechnung_nr)).filter(
+            Rechnung.firmenname == firmenname
+        ).scalar() or 0
+        naechste_nr = letzte_nr + 1
+
         rechnung = Rechnung(
             user_id=current_user.id,
             firmenname=firmenname,
@@ -1051,6 +1059,7 @@ def rechnungen_einreichen():
             dateiname=dateiname_original,
             dateiname_neu=dateiname_neu,
             datei_pfad=datei_pfad,
+            rechnung_nr=naechste_nr,
         )
         db.session.add(rechnung)
         db.session.commit()
