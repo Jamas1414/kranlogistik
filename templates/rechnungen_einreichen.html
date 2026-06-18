@@ -20,7 +20,6 @@
             <div class="card-body p-4">
                 <form method="POST" enctype="multipart/form-data" novalidate>
 
-                    <!-- Firmenname (required) -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="firmenname">
                             Firmenname <span style="color:#e57373;">*</span>
@@ -29,17 +28,15 @@
                                placeholder="z.B. Muster Bau AG" required autocomplete="organization">
                     </div>
 
-                    <!-- BKP-Nummer (optional) -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="bkp_nummer">
                             BKP-Nummer <span class="text-muted fw-normal">(optional)</span>
                         </label>
                         <input type="text" class="form-control" id="bkp_nummer" name="bkp_nummer"
                                placeholder="z.B. 292" autocomplete="off">
-                        <div class="form-text text-muted">Baukostenplan-Nummer gemäss Leistungsverzeichnis</div>
+                        <div class="form-text text-muted">Baukostenplan-Nummer gemaess Leistungsverzeichnis</div>
                     </div>
 
-                    <!-- Vertragsnummer (optional) -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="vertragsnummer">
                             Vertragsnummer <span class="text-muted fw-normal">(optional)</span>
@@ -48,20 +45,18 @@
                                placeholder="z.B. 2024-001" autocomplete="off">
                     </div>
 
-                    <!-- Rechnungstyp (required) -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="rechnungstyp">
                             Rechnungstyp <span style="color:#e57373;">*</span>
                         </label>
                         <select class="form-select" id="rechnungstyp" name="rechnungstyp" required>
-                            <option value="" disabled selected>Bitte auswählen…</option>
+                            <option value="" disabled selected>Bitte auswaehlen...</option>
                             <option value="Rechnung">Rechnung</option>
                             <option value="Akonto">Akonto</option>
                             <option value="Schlussrechnung">Schlussrechnung</option>
                         </select>
                     </div>
 
-                    <!-- File upload -->
                     <div class="mb-4">
                         <label class="form-label fw-semibold" for="rechnung_datei">
                             Datei hochladen <span class="text-muted fw-normal">(optional)</span>
@@ -74,9 +69,9 @@
                              style="border:2px dashed var(--kran-border); background:var(--kran-bg); cursor:pointer; transition:all 0.15s; min-height:110px;">
                             <i class="bi bi-cloud-upload" style="font-size:2rem; color:var(--kran-muted);"></i>
                             <div class="mt-1" style="color:var(--kran-muted); font-size:0.9rem;">
-                                Datei hierher ziehen oder <span style="color:var(--kran-primary); text-decoration:underline;">auswählen</span>
+                                Datei hierher ziehen oder <span style="color:var(--kran-primary); text-decoration:underline;">auswaehlen</span>
                             </div>
-                            <div class="small mt-1" style="color:var(--kran-muted);">PDF, Word, Excel, JPG · max. 16 MB</div>
+                            <div class="small mt-1" style="color:var(--kran-muted);">PDF, Word, Excel, JPG - max. 16 MB</div>
                             <div id="file-name" class="mt-2 small fw-semibold" style="color:var(--kran-primary); display:none;"></div>
                         </div>
                         <input type="file" id="rechnung_datei" name="rechnung_datei"
@@ -97,4 +92,63 @@
 
 <script>
 const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElemen
+const fileInput = document.getElementById('rechnung_datei');
+const fileNameEl = document.getElementById('file-name');
+const firmaInput = document.getElementById('firmenname');
+const bkpInput = document.getElementById('bkp_nummer');
+const vertragInput = document.getElementById('vertragsnummer');
+
+dropZone.addEventListener('click', function() { fileInput.click(); });
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--kran-accent)';
+    dropZone.style.background = '#eef8f9';
+});
+dropZone.addEventListener('dragleave', function() { resetDropzone(); });
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    resetDropzone();
+    if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        showFile(e.dataTransfer.files[0].name);
+    }
+});
+fileInput.addEventListener('change', function() {
+    if (fileInput.files.length) showFile(fileInput.files[0].name);
+});
+
+function resetDropzone() {
+    dropZone.style.borderColor = 'var(--kran-border)';
+    dropZone.style.background = 'var(--kran-bg)';
+}
+
+function cleanPart(s) {
+    return s.trim().replace(/[^\w\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+}
+
+function showFile(name) {
+    var isPdf = name.toLowerCase().endsWith('.pdf');
+    var displayName = name;
+    if (isPdf) {
+        var bkp = cleanPart(bkpInput.value);
+        var vertrag = cleanPart(vertragInput.value);
+        var firma = cleanPart(firmaInput.value) || 'Firma';
+        var parts = [];
+        if (bkp) parts.push(bkp);
+        if (vertrag) parts.push(vertrag);
+        parts.push(firma);
+        displayName = parts.join('-') + '.pdf';
+    }
+    fileNameEl.textContent = 'Neuer Name: ' + displayName;
+    fileNameEl.style.display = 'block';
+    dropZone.style.borderColor = 'var(--kran-accent)';
+}
+
+[firmaInput, bkpInput, vertragInput].forEach(function(el) {
+    el.addEventListener('input', function() {
+        if (fileInput.files.length) showFile(fileInput.files[0].name);
+    });
+});
+</script>
+
+{% endblock %}
