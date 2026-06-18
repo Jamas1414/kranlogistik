@@ -1054,7 +1054,8 @@ def rechnungen_bestaetigung(rechnung_id):
     if rechnung.user_id != current_user.id and not current_user.is_admin():
         flash('Zugriff verweigert.', 'danger')
         return redirect(url_for('baumanagement'))
-    return render_template('rechnungen_bestaetigung.html', rechnung=rechnung, onedrive_url=ONEDRIVE_URL)
+    created_at_str = rechnung.created_at.strftime('%d.%m.%Y %H:%M') if rechnung.created_at else ''
+    return render_template('rechnungen_bestaetigung.html', rechnung=rechnung, onedrive_url=ONEDRIVE_URL, created_at_str=created_at_str)
 
 
 @app.route('/rechnungen/download/<int:rechnung_id>')
@@ -1078,10 +1079,12 @@ def rechnungen_download(rechnung_id):
 @login_required
 def rechnungen_liste():
     if current_user.is_admin():
-        rechnungen = Rechnung.query.order_by(Rechnung.created_at.desc()).all()
+        rechnungen_raw = Rechnung.query.order_by(Rechnung.created_at.desc()).all()
     else:
-        rechnungen = Rechnung.query.filter_by(user_id=current_user.id).order_by(Rechnung.created_at.desc()).all()
-    return render_template('rechnungen_liste.html', rechnungen=rechnungen)
+        rechnungen_raw = Rechnung.query.filter_by(user_id=current_user.id).order_by(Rechnung.created_at.desc()).all()
+    for r in rechnungen_raw:
+        r.created_at_str = r.created_at.strftime('%d.%m.%Y') if r.created_at else ''
+    return render_template('rechnungen_liste.html', rechnungen=rechnungen_raw)
 
 
 # ---------------------------------------------------------------------------
