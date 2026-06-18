@@ -35,6 +35,7 @@
                     {% if current_user.is_admin() %}
                     <th class="ps-3">Benutzer</th>
                     {% endif %}
+                    <th style="width:60px;">Nr.</th>
                     <th>Firmenname</th>
                     <th>Vertragsnr.</th>
                     <th>BKP</th>
@@ -49,6 +50,7 @@
                 {% if current_user.is_admin() %}
                 <td class="ps-3 small fw-semibold" style="color:var(--kran-text);">{{ r.user.firma }}</td>
                 {% endif %}
+                <td class="small text-muted text-center">{% if r.rechnung_nr %}#{{ r.rechnung_nr }}{% else %}-{% endif %}</td>
                 <td class="fw-semibold">{{ r.firmenname or '-' }}</td>
                 <td style="color:var(--kran-muted);">{{ r.vertragsnummer or '-' }}</td>
                 <td style="color:var(--kran-muted);">{{ r.bkp_nummer or '-' }}</td>
