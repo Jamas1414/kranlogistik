@@ -300,10 +300,13 @@ def index():
         letzte_buchung = Booking.query.filter_by(
             user_id=current_user.id
         ).order_by(Booking.created_at.desc()).first()
+        ifc_path = os.path.join(IFC_UPLOAD_DIR, 'model.ifc')
+        ifc_available = os.path.isfile(ifc_path)
         return render_template('dashboard.html',
                                naechste_buchung=naechste_buchung,
                                aktive_tickets=aktive_tickets,
-                               letzte_buchung=letzte_buchung)
+                               letzte_buchung=letzte_buchung,
+                               ifc_available=ifc_available)
     return redirect(url_for('login'))
 
 
@@ -635,7 +638,37 @@ def baulogistik():
 @app.route('/modell')
 @login_required
 def modell():
-    return render_template('modell.html')
+    ifc_path = os.path.join(IFC_UPLOAD_DIR, 'model.ifc')
+    ifc_available = os.path.isfile(ifc_path)
+    return render_template('modell.html', ifc_available=ifc_available)
+
+
+@app.route('/modell/upload', methods=['POST'])
+@login_required
+def modell_upload():
+    if not current_user.is_admin():
+        flash('Nur Administratoren koennen das Modell hochladen.', 'danger')
+        return redirect(url_for('index'))
+    if 'ifc_datei' not in request.files:
+        flash('Keine Datei ausgewaehlt.', 'danger')
+        return redirect(url_for('index'))
+    f = request.files['ifc_datei']
+    if not f.filename:
+        flash('Keine Datei ausgewaehlt.', 'danger')
+        return redirect(url_for('index'))
+    os.makedirs(IFC_UPLOAD_DIR, exist_ok=True)
+    f.save(os.path.join(IFC_UPLOAD_DIR, 'model.ifc'))
+    flash('3D-Modell erfolgreich hochgeladen.', 'success')
+    return redirect(url_for('index'))
+
+
+@app.route('/modell/file')
+@login_required
+def modell_file():
+    ifc_path = os.path.join(IFC_UPLOAD_DIR, 'model.ifc')
+    if not os.path.isfile(ifc_path):
+        return '', 404
+    return send_file(ifc_path, mimetype='application/octet-stream', as_attachment=False, download_name='model.ifc')
 
 
 # ---------------------------------------------------------------------------
@@ -940,6 +973,7 @@ def allowed_file(filename):
 ONEDRIVE_URL = os.environ.get('ONEDRIVE_URL', '')
 
 RECHNUNG_UPLOAD_DIR = os.path.join(basedir, 'uploads', 'rechnungen')
+IFC_UPLOAD_DIR = os.path.join(basedir, 'uploads', 'modell')
 
 
 def clean_for_filename(s):
