@@ -926,4 +926,264 @@ def api_parkplatz_check():
 
 def admin_required():
     if not current_user.is_authenticated or not current_user.is_admin():
-        flash('Kein Zugriff.
+        flash('Kein Zugriff. Diese Seite ist nur fuer Administratoren.', 'danger')
+        return False
+    return True
+
+
+ALLOWED_EXTENSIONS = {'pdf', 'doc', 'docx', 'xlsx', 'xls', 'jpg', 'jpeg', 'png'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+ONEDRIVE_URL = os.environ.get('ONEDRIVE_URL', '')
+
+RECHNUNG_UPLOAD_DIR = os.path.join(basedir, 'uploads', 'rechnungen')
+
+
+def clean_for_filename(s):
+    if not s:
+        return ''
+    s = s.strip()
+    s = re.sub(r'[^\w\-]', '_', s)
+    s = re.sub(r'_+', '_', s)
+    return s.strip('_')
+
+
+# ---------------------------------------------------------------------------
+# Routen: Rechnungen
+# ---------------------------------------------------------------------------
+
+@app.route('/rechnungen/einreichen', methods=['GET', 'POST'])
+@login_required
+def rechnungen_einreichen():
+    if request.method == 'POST':
+        firmenname = request.form.get('firmenname', '').strip()
+        bkp_nummer = request.form.get('bkp_nummer', '').strip()
+        vertragsnummer = request.form.get('vertragsnummer', '').strip()
+        rechnungstyp = request.form.get('rechnungstyp', '').strip()
+        datei = request.files.get('rechnung_datei')
+
+        if not firmenname or not rechnungstyp:
+            flash('Bitte Firmenname und Rechnungstyp ausfuellen.', 'danger')
+            return redirect(url_for('rechnungen_einreichen'))
+
+        dateiname_original = None
+        dateiname_neu = None
+        datei_pfad = None
+
+        if datei and datei.filename and allowed_file(datei.filename):
+            ext = datei.filename.rsplit('.', 1)[1].lower()
+            dateiname_original = secure_filename(datei.filename)
+            if ext == 'pdf':
+                parts = []
+                if bkp_nummer:
+                    parts.append(clean_for_filename(bkp_nummer))
+                if vertragsnummer:
+                    parts.append(clean_for_filename(vertragsnummer))
+                parts.append(clean_for_filename(firmenname) or 'Unbekannt')
+                dateiname_neu = '-'.join(parts) + '.pdf'
+            else:
+                dateiname_neu = dateiname_original
+            try:
+                os.makedirs(RECHNUNG_UPLOAD_DIR, exist_ok=True)
+                file_id = str(uuid.uuid4())
+                save_name = file_id + '_' + dateiname_neu
+                datei_pfad = os.path.join(RECHNUNG_UPLOAD_DIR, save_name)
+                datei.save(datei_pfad)
+            except Exception as e:
+                datei_pfad = None
+                flash('Datei konnte nicht gespeichert werden: ' + str(e), 'warning')
+
+        rechnung = Rechnung(
+            user_id=current_user.id,
+            firmenname=firmenname,
+            bkp_nummer=bkp_nummer or None,
+            vertragsnummer=vertragsnummer or None,
+            rechnungstyp=rechnungstyp,
+            dateiname=dateiname_original,
+            dateiname_neu=dateiname_neu,
+            datei_pfad=datei_pfad,
+        )
+        db.session.add(rechnung)
+        db.session.commit()
+        return redirect(url_for('rechnungen_bestaetigung', rechnung_id=rechnung.id))
+
+    return render_template('rechnungen_einreichen.html')
+
+
+@app.route('/rechnungen/bestaetigung/<int:rechnung_id>')
+@login_required
+def rechnungen_bestaetigung(rechnung_id):
+    rechnung = Rechnung.query.get_or_404(rechnung_id)
+    if rechnung.user_id != current_user.id and not current_user.is_admin():
+        flash('Zugriff verweigert.', 'danger')
+        return redirect(url_for('baumanagement'))
+    return render_template('rechnungen_bestaetigung.html', rechnung=rechnung, onedrive_url=ONEDRIVE_URL)
+
+
+@app.route('/rechnungen/download/<int:rechnung_id>')
+@login_required
+def rechnungen_download(rechnung_id):
+    rechnung = Rechnung.query.get_or_404(rechnung_id)
+    if rechnung.user_id != current_user.id and not current_user.is_admin():
+        flash('Zugriff verweigert.', 'danger')
+        return redirect(url_for('baumanagement'))
+    if not rechnung.datei_pfad or not os.path.isfile(rechnung.datei_pfad):
+        flash('Datei nicht mehr verfuegbar.', 'warning')
+        return redirect(url_for('rechnungen_bestaetigung', rechnung_id=rechnung_id))
+    return send_file(
+        rechnung.datei_pfad,
+        as_attachment=True,
+        download_name=rechnung.dateiname_neu or rechnung.dateiname or 'rechnung.pdf',
+    )
+
+
+@app.route('/rechnungen')
+@login_required
+def rechnungen_liste():
+    if current_user.is_admin():
+        rechnungen = Rechnung.query.order_by(Rechnung.created_at.desc()).all()
+    else:
+        rechnungen = Rechnung.query.filter_by(user_id=current_user.id).order_by(Rechnung.created_at.desc()).all()
+    return render_template('rechnungen_liste.html', rechnungen=rechnungen)
+
+
+# ---------------------------------------------------------------------------
+# Routen: Baumanagement
+# ---------------------------------------------------------------------------
+
+@app.route('/baumanagement')
+@login_required
+def baumanagement():
+    return render_template('baumanagement.html')
+
+
+# ---------------------------------------------------------------------------
+# Routen: Admin (routes)
+# ---------------------------------------------------------------------------
+
+@app.route('/admin')
+@login_required
+def admin():
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    users = User.query.order_by(User.created_at).all()
+    return render_template('admin.html', users=users)
+
+
+@app.route('/admin/user/<int:user_id>/aktivieren', methods=['POST'])
+@login_required
+def admin_user_aktivieren(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    user = User.query.get_or_404(user_id)
+    user.active = True
+    db.session.commit()
+    flash('Benutzer ' + user.name + ' wurde freigeschaltet.', 'success')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/deaktivieren', methods=['POST'])
+@login_required
+def admin_user_deaktivieren(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    if user_id == current_user.id:
+        flash('Du kannst dein eigenes Konto nicht deaktivieren.', 'danger')
+        return redirect(url_for('admin'))
+    user = User.query.get_or_404(user_id)
+    user.active = False
+    db.session.commit()
+    flash('Benutzer ' + user.name + ' wurde deaktiviert.', 'warning')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/bearbeiten', methods=['POST'])
+@login_required
+def admin_user_bearbeiten(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    user = User.query.get_or_404(user_id)
+    neue_rolle = request.form.get('role', user.role)
+    if neue_rolle in ('admin', 'extern'):
+        user.role = neue_rolle
+    db.session.commit()
+    flash('Benutzer ' + user.name + ' wurde aktualisiert.', 'success')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/user/<int:user_id>/loeschen', methods=['POST'])
+@login_required
+def admin_user_loeschen(user_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    if user_id == current_user.id:
+        flash('Du kannst dein eigenes Konto nicht loeschen.', 'danger')
+        return redirect(url_for('admin'))
+    user = User.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    flash('Benutzer wurde geloescht.', 'warning')
+    return redirect(url_for('admin'))
+
+
+@app.route('/admin/buchungen')
+@login_required
+def admin_buchungen():
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    buchungen = Booking.query.order_by(Booking.datum.desc(), Booking.start_zeit).all()
+    return render_template('admin_buchungen.html', buchungen=buchungen, buchungsarten=BUCHUNGSARTEN)
+
+
+@app.route('/admin/auswertung')
+@login_required
+def admin_auswertung():
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    buchungen = Booking.query.order_by(Booking.datum.desc()).all()
+    gesamt_preis = sum(b.preis for b in buchungen)
+    gesamt_stunden = round(sum(b.dauer_stunden for b in buchungen), 2)
+    auswertung_by_user = {}
+    for b in buchungen:
+        uid = b.user_id
+        if uid not in auswertung_by_user:
+            auswertung_by_user[uid] = {
+                'user': b.user,
+                'buchungen': 0,
+                'stunden': 0.0,
+                'preis': 0.0,
+            }
+        auswertung_by_user[uid]['buchungen'] += 1
+        auswertung_by_user[uid]['stunden'] = round(auswertung_by_user[uid]['stunden'] + b.dauer_stunden, 2)
+        auswertung_by_user[uid]['preis'] = round(auswertung_by_user[uid]['preis'] + b.preis, 2)
+    return render_template(
+        'admin_auswertung.html',
+        buchungen=buchungen,
+        gesamt_preis=gesamt_preis,
+        gesamt_stunden=gesamt_stunden,
+        auswertung_by_user=list(auswertung_by_user.values()),
+        buchungsarten=BUCHUNGSARTEN,
+    )
+
+
+@app.route('/admin/buchung/<int:booking_id>/loeschen', methods=['POST'])
+@login_required
+def admin_buchung_loeschen(booking_id):
+    if not admin_required():
+        return redirect(url_for('kalender'))
+    booking = Booking.query.get_or_404(booking_id)
+    db.session.delete(booking)
+    db.session.commit()
+    flash('Buchung wurde geloescht.', 'success')
+    return redirect(url_for('admin_buchungen'))
+
+
+# ---------------------------------------------------------------------------
+# App starten
+# ---------------------------------------------------------------------------
+
+if __name__ == '__main__':
+    app.run(debug=True)
