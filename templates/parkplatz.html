@@ -15,51 +15,50 @@
     <div class="col-lg-5">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center py-3 px-4" style="background:white; border-bottom:1px solid #eef0f3;">
-                <a href="{{ url_for('parkplatz', monat=vorheriger_monat_p.strftime('%Y-%m')) }}"
-                   class="kbtn-nav" aria-label="Vorheriger Monat">
+                <a href="{{ url_for('parkplatz', monat=vorheriger_monat_p_str) }}" class="kbtn-nav">
                     <i class="bi bi-chevron-left"></i>
                 </a>
                 <span class="fw-semibold fs-6">{{ monat_name_p }}</span>
-                <a href="{{ url_for('parkplatz', monat=naechster_monat_p.strftime('%Y-%m')) }}"
-                   class="kbtn-nav" aria-label="Nächster Monat">
+                <a href="{{ url_for('parkplatz', monat=naechster_monat_p_str) }}" class="kbtn-nav">
                     <i class="bi bi-chevron-right"></i>
                 </a>
             </div>
             <div class="card-body p-3">
-
-                <!-- Weekday headers -->
                 <div class="k-grid mb-1">
                     {% for wd in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}
                     <div class="k-wd">{{ wd }}</div>
                     {% endfor %}
                 </div>
-
-                <!-- Day cells -->
-                {% for woche in cal_grid_p %}
+                {% for row in cal_rows_p %}
                 <div class="k-grid mb-1">
-                    {% for tag_num in woche %}
-                    {% if tag_num == 0 %}
+                    {% for cell in row %}
+                    {% if cell is none %}
                         <div></div>
+                    {% elif cell.status == 'vergangen' %}
+                        <div class="k-day k-vergangen">{{ cell.day }}</div>
+                    {% elif cell.status == 'voll' %}
+                        <div class="k-day k-voll" title="Ausgebucht">{{ cell.day }}</div>
                     {% else %}
-                        {% set tag_datum = monat_start_p.replace(day=tag_num) %}
-                        {% set status = monat_belegung_p.get(tag_num, 'frei') %}
-                        {% set ist_heute = (tag_datum == heute) %}
-                        {% set ist_ausgewaehlt = (ausgewaehlter_tag_park and tag_datum == ausgewaehlter_tag_park) %}
-
-                        {% if status == 'vergangen' %}
-                        <div class="k-day k-vergangen">{{ tag_num }}</div>
-                        {% elif status == 'voll' %}
-                        <div class="k-day k-voll" title="Ausgebucht">{{ tag_num }}</div>
-                        {% else %}
-                        <a href="{{ url_for('parkplatz', datum=tag_datum.strftime('%Y-%m-%d'), monat=monat_start_p.strftime('%Y-%m')) }}"
-                           class="k-day k-{{ status }}{% if ist_heute %} k-heute{% endif %}{% if ist_ausgewaehlt %} k-sel{% endif %}">
-                            {{ tag_num }}
+                        <a href="{{ url_for('parkplatz', datum=cell.datum_str, monat=monat_nav_str_p) }}"
+                           class="k-day k-{{ cell.status }}{% if cell.ist_heute %} k-heute{% endif %}{% if cell.ist_ausgewaehlt %} k-sel{% endif %}">
+                            {{ cell.day }}
                         </a>
-                        {% endif %}
                     {% endif %}
                     {% endfor %}
                 </div>
                 {% endfor %}
+                <div class="d-flex flex-wrap gap-3 mt-3 pt-3 border-top">
+                    <span class="k-legend"><span class="k-dot frei"></span>Frei</span>
+                    <span class="k-legend"><span class="k-dot wenig"></span>Wenige Plätze</span>
+                    <span class="k-legend"><span class="k-dot voll"></span>Ausgebucht</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- Legend -->
-       
+    <!-- ── RIGHT: Selected day + form + tickets ── -->
+    <div class="col-lg-7">
+        {% if ausgewaehlter_tag_park %}
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="k-day-badge" style="background:var(--kran-
