@@ -19,7 +19,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'bitte-aendern-in-produktion')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'kranlogistik.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB max
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {'timeout': 30, 'check_same_thread': False},
+    'pool_pre_ping': True,
+}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -234,6 +238,14 @@ def berechne_preis(buchungsart, start_zeit, end_zeit):
 def _ensure_db():
     if not getattr(app, '_db_initialized', False):
         db.create_all()
+        # Enable WAL mode for concurrent gunicorn workers
+        try:
+            with db.engine.connect() as _conn:
+                _conn.execute(db.text('PRAGMA journal_mode=WAL'))
+                _conn.execute(db.text('PRAGMA busy_timeout=30000'))
+                _conn.commit()
+        except Exception:
+            pass
         # Migrate existing rechnung table with new columns (safe: ignore if already exists)
         for sql in [
             'ALTER TABLE rechnung ADD COLUMN firmenname VARCHAR(120)',
@@ -1221,6 +1233,12 @@ def admin_buchung_loeschen(booking_id):
 # ---------------------------------------------------------------------------
 # App starten
 # ---------------------------------------------------------------------------
+
+@app.errorhandler(413)
+def too_large(e):
+    flash('Die Datei ist zu gross (max. 100 MB). Bitte eine kleinere Datei hochladen.', 'danger')
+    return redirect(request.referrer or url_for('index'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
