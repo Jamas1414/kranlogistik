@@ -135,8 +135,8 @@
                         <label class="form-label fw-semibold small text-muted text-uppercase" style="letter-spacing:.05em;">Buchungsart</label>
                         <select class="form-select" name="buchungsart" id="sel-buchungsart" required onchange="berechnePreis()">
                             <option value="" disabled selected>Bitte auswaehlen...</option>
-                            {% for ba in buchungsarten %}
-                            <option value="{{ ba.id }}" data-preis="{{ ba.preis_pro_stunde }}">{{ ba.name }}</option>
+                            {% for key, ba in buchungsarten.items() %}
+                            <option value="{{ key }}" data-preis="{{ ba.preis or 0 }}">{{ ba.label }}</option>
                             {% endfor %}
                         </select>
                     </div>
