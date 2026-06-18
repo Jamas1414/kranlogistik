@@ -32,7 +32,12 @@
                     <tbody>
                         <tr>
                             <td class="ps-4 py-3 text-muted small" style="width:40%;">Firmenname</td>
-                            <td class="py-3 fw-semibold">{{ rechnung.firmenname or '-' }}</td>
+                            <td class="py-3 fw-semibold">
+                                {{ rechnung.firmenname or '-' }}
+                                {% if rechnung.rechnung_nr %}
+                                <span class="badge ms-2 rounded-pill" style="background:var(--kran-primary);color:#fff;font-size:.7rem;">Nr. {{ rechnung.rechnung_nr }}</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% if rechnung.bkp_nummer %}
                         <tr>
