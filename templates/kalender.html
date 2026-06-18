@@ -18,54 +18,38 @@
     <div class="col-lg-5">
         <div class="card shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center py-3 px-4" style="background:white; border-bottom:1px solid #eef0f3;">
-                <a href="{{ url_for('kalender', monat=vorheriger_monat.strftime('%Y-%m')) }}"
-                   class="kbtn-nav" aria-label="Vorheriger Monat">
+                <a href="{{ url_for('kalender', monat=vorheriger_monat_str) }}" class="kbtn-nav">
                     <i class="bi bi-chevron-left"></i>
                 </a>
                 <span class="fw-semibold fs-6">{{ monat_name }}</span>
-                <a href="{{ url_for('kalender', monat=naechster_monat.strftime('%Y-%m')) }}"
-                   class="kbtn-nav" aria-label="Nächster Monat">
+                <a href="{{ url_for('kalender', monat=naechster_monat_str) }}" class="kbtn-nav">
                     <i class="bi bi-chevron-right"></i>
                 </a>
             </div>
             <div class="card-body p-3">
-
-                <!-- Weekday headers -->
                 <div class="k-grid mb-1">
                     {% for wd in ['Mo','Di','Mi','Do','Fr','Sa','So'] %}
                     <div class="k-wd">{{ wd }}</div>
                     {% endfor %}
                 </div>
-
-                <!-- Day cells -->
-                {% for woche in cal_grid %}
+                {% for row in cal_rows %}
                 <div class="k-grid mb-1">
-                    {% for tag_num in woche %}
-                    {% if tag_num == 0 %}
+                    {% for cell in row %}
+                    {% if cell is none %}
                         <div></div>
+                    {% elif cell.status == 'vergangen' %}
+                        <div class="k-day k-vergangen">{{ cell.day }}</div>
+                    {% elif cell.status == 'voll' %}
+                        <div class="k-day k-voll" title="Ausgebucht">{{ cell.day }}</div>
                     {% else %}
-                        {% set tag_datum = monat_start.replace(day=tag_num) %}
-                        {% set status = monat_belegung.get(tag_num, 'frei') %}
-                        {% set ist_heute = (tag_datum == heute) %}
-                        {% set ist_ausgewaehlt = (ausgewaehlter_tag and tag_datum == ausgewaehlter_tag) %}
-
-                        {% if status == 'vergangen' %}
-                        <div class="k-day k-vergangen">{{ tag_num }}</div>
-                        {% elif status == 'voll' %}
-                        <div class="k-day k-voll" title="Ausgebucht">{{ tag_num }}</div>
-                        {% else %}
-                        <a href="{{ url_for('kalender', datum=tag_datum.strftime('%Y-%m-%d'), monat=monat_start.strftime('%Y-%m')) }}"
-                           class="k-day k-{{ status }}{% if ist_heute %} k-heute{% endif %}{% if ist_ausgewaehlt %} k-sel{% endif %}"
-                           title="{{ status|capitalize }}">
-                            {{ tag_num }}
+                        <a href="{{ url_for('kalender', datum=cell.datum_str, monat=monat_nav_str) }}"
+                           class="k-day k-{{ cell.status }}{% if cell.ist_heute %} k-heute{% endif %}{% if cell.ist_ausgewaehlt %} k-sel{% endif %}">
+                            {{ cell.day }}
                         </a>
-                        {% endif %}
                     {% endif %}
                     {% endfor %}
                 </div>
                 {% endfor %}
-
-                <!-- Legend -->
                 <div class="d-flex flex-wrap gap-3 mt-3 pt-3 border-top">
                     <span class="k-legend"><span class="k-dot frei"></span>Frei</span>
                     <span class="k-legend"><span class="k-dot teilweise"></span>Teilweise belegt</span>
@@ -79,19 +63,17 @@
     <div class="col-lg-7">
         {% if ausgewaehlter_tag and segmente is not none %}
 
-        <!-- Day header -->
         <div class="d-flex align-items-center gap-2 mb-3">
             <div class="k-day-badge">
-                <div class="k-day-badge-num">{{ ausgewaehlter_tag.day }}</div>
-                <div class="k-day-badge-mon">{{ monat_name.split(' ')[0][:3] }}</div>
+                <div class="k-day-badge-num">{{ ausgewaehlter_tag_day }}</div>
+                <div class="k-day-badge-mon">{{ monat_name_short }}</div>
             </div>
             <div>
-                <div class="fw-semibold fs-6">{{ tag_name }}, {{ ausgewaehlter_tag.strftime('%d. ') }}{{ monat_name }}</div>
+                <div class="fw-semibold fs-6">{{ tag_name }}, {{ ausgewaehlter_tag_str }}{{ monat_name }}</div>
                 <small class="text-muted">{{ slot_start_hour }}:00 – {{ slot_end_hour }}:00 Uhr</small>
             </div>
         </div>
 
-        <!-- Slot timeline -->
         <div class="card shadow-sm mb-4">
             <div class="card-body p-0">
                 {% for seg in segmente %}
@@ -105,13 +87,9 @@
                     <div class="slot-content">
                         {% if seg.belegt %}
                             {% if seg.ist_eigene %}
-                                <span class="slot-label" style="color:var(--kran-primary);">
-                                    <i class="bi bi-check-circle-fill me-1"></i>Deine Buchung
-                                </span>
+                                <span class="slot-label" style="color:var(--kran-primary);"><i class="bi bi-check-circle-fill me-1"></i>Deine Buchung</span>
                             {% else %}
-                                <span class="slot-label text-danger">
-                                    <i class="bi bi-x-circle-fill me-1"></i>Belegt
-                                </span>
+                                <span class="slot-label text-danger"><i class="bi bi-x-circle-fill me-1"></i>Belegt</span>
                             {% endif %}
                             {% if seg.booking %}
                             <div class="slot-sub">{{ seg.booking.user.firma }} · {{ seg.start.strftime('%H:%M') }}–{{ seg.end.strftime('%H:%M') }} ({{ seg.dauer_minuten }} Min.)</div>
@@ -125,7 +103,24 @@
                             </form>
                             {% endif %}
                         {% else %}
-                            <span class="slot-label" style="color:#1a7a4a;">
-                                <i class="bi bi-circle me-1"></i>Verfügbar
-                            </span>
-                            <div class="slot-sub">{{ seg.dauer_minuten }} Mi
+                            <span class="slot-label" style="color:#1a7a4a;"><i class="bi bi-circle me-1"></i>Verfügbar</span>
+                            <div class="slot-sub">{{ seg.dauer_minuten }} Min. frei · Klicken zum Buchen</div>
+                        {% endif %}
+                    </div>
+                    {% if not seg.belegt %}
+                    <div class="slot-action"><span class="btn btn-sm btn-success py-1 px-2"><i class="bi bi-plus"></i></span></div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card shadow-sm" id="buchungsformular">
+            <div class="card-header py-3 px-4" style="background:white;">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-pencil-square me-2" style="color:var(--kran-primary);"></i>Kran reservieren</h6>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('buchen') }}">
+                    <input type="hidden" name="datum" value="{{ ausgewaehlter_tag_datum_str }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small t
