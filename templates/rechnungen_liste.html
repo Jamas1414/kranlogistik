@@ -17,7 +17,7 @@
         </div>
         <div>
             <h4 class="mb-0 fw-bold" style="color:var(--kran-text);">{% if current_user.is_admin() %}Alle Rechnungen{% else %}Meine Rechnungen{% endif %}</h4>
-            <div class="small" style="color:var(--kran-muted);">{{ rechnungen|length }} Einträge</div>
+            <div class="small" style="color:var(--kran-muted);">{{ rechnungen|length }} Eintraege</div>
         </div>
     </div>
     <a href="{{ url_for('rechnungen_einreichen') }}" class="btn btn-sm fw-semibold"
@@ -49,9 +49,9 @@
                 {% if current_user.is_admin() %}
                 <td class="ps-3 small fw-semibold" style="color:var(--kran-text);">{{ r.user.firma }}</td>
                 {% endif %}
-                <td class="fw-semibold">{{ r.firmenname or '—' }}</td>
-                <td style="color:var(--kran-muted);">{{ r.vertragsnummer or '—' }}</td>
-                <td style="color:var(--kran-muted);">{{ r.bkp_nummer or '—' }}</td>
+                <td class="fw-semibold">{{ r.firmenname or '-' }}</td>
+                <td style="color:var(--kran-muted);">{{ r.vertragsnummer or '-' }}</td>
+                <td style="color:var(--kran-muted);">{{ r.bkp_nummer or '-' }}</td>
                 <td>
                     <span class="badge rounded-pill"
                           style="background:{% if r.rechnungstyp == 'Schlussrechnung' %}#d6e8f5;color:#1a4f72{% elif r.rechnungstyp == 'Akonto' %}#e8e0f5;color:#4a3080{% else %}#d4ede2;color:#2d6a4a{% endif %};">
@@ -66,7 +66,23 @@
                     {% elif r.dateiname %}
                         <i class="bi bi-paperclip me-1"></i>{{ r.dateiname }}
                     {% else %}
-                        <span style="opacity:0.4;">—</span>
+                        <span style="opacity:0.4;">-</span>
                     {% endif %}
                 </td>
-                <td class="small" style="color:var(--kran-muted);"
+                <td class="small" style="color:var(--kran-muted);">{{ r.created_at.strftime('%d.%m.%Y') }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5" style="color:var(--kran-muted);">
+    <i class="bi bi-inbox" style="font-size:3rem; opacity:0.3;"></i>
+    <div class="mt-2">Noch keine Rechnungen eingereicht.</div>
+    <a href="{{ url_for('rechnungen_einreichen') }}" class="btn btn-sm mt-3"
+       style="background:var(--kran-primary);color:#fff;border-radius:8px;">Erste Rechnung einreichen</a>
+</div>
+{% endif %}
+
+{% endblock %}
