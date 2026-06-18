@@ -464,6 +464,25 @@ def kalender():
                 else:
                     monat_belegung[day_num] = 'frei'
 
+    # Precompute calendar rows (avoids Python method calls in Jinja2 template)
+    monat_nav_str = monat_start.strftime('%Y-%m')
+    cal_rows = []
+    for week in cal_grid:
+        row = []
+        for day_num in week:
+            if day_num == 0:
+                row.append(None)
+            else:
+                tag = date(monat_start.year, monat_start.month, day_num)
+                row.append({
+                    'day': day_num,
+                    'datum_str': tag.strftime('%Y-%m-%d'),
+                    'status': monat_belegung.get(day_num, 'frei'),
+                    'ist_heute': tag == heute,
+                    'ist_ausgewaehlt': (ausgewaehlter_tag is not None and tag == ausgewaehlter_tag),
+                })
+        cal_rows.append(row)
+
     # Day detail: segments for selected day
     segmente = None
     if ausgewaehlter_tag and monat_start <= ausgewaehlter_tag < monat_ende:
@@ -473,23 +492,28 @@ def kalender():
         )
 
     monat_name = MONATE_DE[monat_start.month - 1] + ' ' + str(monat_start.year)
-    tag_name = WOCHENTAGE_DE[ausgewaehlter_tag.weekday()] if ausgewaehlter_tag else None
+    tag_name = WOCHENTAGE_DE[ausgewaehlter_tag.weekday()] if ausgewaehlter_tag else ''
+    ausgewaehlter_tag_str = ausgewaehlter_tag.strftime('%d. ') if ausgewaehlter_tag else ''
+    ausgewaehlter_tag_day = ausgewaehlter_tag.day if ausgewaehlter_tag else ''
+    ausgewaehlter_tag_datum_str = ausgewaehlter_tag.strftime('%Y-%m-%d') if ausgewaehlter_tag else ''
 
     return render_template(
         'kalender.html',
         ausgewaehlter_tag=ausgewaehlter_tag,
+        ausgewaehlter_tag_str=ausgewaehlter_tag_str,
+        ausgewaehlter_tag_day=ausgewaehlter_tag_day,
+        ausgewaehlter_tag_datum_str=ausgewaehlter_tag_datum_str,
         segmente=segmente,
         buchungsarten=BUCHUNGSARTEN,
         stundensatz=STUNDENSATZ,
         slot_start_hour=SLOT_START_HOUR,
         slot_end_hour=SLOT_END_HOUR,
-        monat_start=monat_start,
-        vorheriger_monat=vorheriger_monat,
-        naechster_monat=naechster_monat,
-        monat_belegung=monat_belegung,
-        cal_grid=cal_grid,
-        heute=heute,
+        vorheriger_monat_str=vorheriger_monat.strftime('%Y-%m'),
+        naechster_monat_str=naechster_monat.strftime('%Y-%m'),
+        cal_rows=cal_rows,
+        monat_nav_str=monat_nav_str,
         monat_name=monat_name,
+        monat_name_short=monat_name.split(' ')[0][:3],
         tag_name=tag_name,
     )
 
@@ -761,29 +785,54 @@ def parkplatz():
                     monat_belegung_p[day_num] = 'frei'
 
     monat_name_p = MONATE_DE[monat_start_p.month - 1] + ' ' + str(monat_start_p.year)
-    tag_name_park = WOCHENTAGE_DE[ausgewaehlter_tag_park.weekday()] if ausgewaehlter_tag_park else None
+    tag_name_park = WOCHENTAGE_DE[ausgewaehlter_tag_park.weekday()] if ausgewaehlter_tag_park else ''
+    monat_nav_str_p = monat_start_p.strftime('%Y-%m')
+
+    # Precompute calendar rows for parkplatz
+    cal_rows_p = []
+    for week in cal_grid_p:
+        row = []
+        for day_num in week:
+            if day_num == 0:
+                row.append(None)
+            else:
+                tag = date(monat_start_p.year, monat_start_p.month, day_num)
+                row.append({
+                    'day': day_num,
+                    'datum_str': tag.strftime('%Y-%m-%d'),
+                    'status': monat_belegung_p.get(day_num, 'frei'),
+                    'ist_heute': tag == heute,
+                    'ist_ausgewaehlt': (ausgewaehlter_tag_park is not None and tag == ausgewaehlter_tag_park),
+                })
+        cal_rows_p.append(row)
 
     # Free spots for selected day
     if ausgewaehlter_tag_park:
         belegt_ausgewaehlt = ParkTicket.query.filter_by(datum=ausgewaehlter_tag_park).count()
         freie_plaetze_ausgewaehlt = max(0, MAX_PARKPLAETZE - belegt_ausgewaehlt)
     else:
-        freie_plaetze_ausgewaehlt = None
+        freie_plaetze_ausgewaehlt = -1  # sentinel: no day selected
+
+    ausgewaehlter_tag_park_str = ausgewaehlter_tag_park.strftime('%d. ') if ausgewaehlter_tag_park else ''
+    ausgewaehlter_tag_park_day = ausgewaehlter_tag_park.day if ausgewaehlter_tag_park else ''
+    ausgewaehlter_tag_park_datum_str = ausgewaehlter_tag_park.strftime('%Y-%m-%d') if ausgewaehlter_tag_park else ''
 
     return render_template(
         'parkplatz.html',
         eigene_tickets=eigene_tickets,
         tage_pro_kennzeichen=tage_pro_kennzeichen,
         gesamt_tage=len(eigene_tickets),
-        heute=heute,
         max_parkplaetze=MAX_PARKPLAETZE,
-        monat_start_p=monat_start_p,
-        vorheriger_monat_p=vorheriger_monat_p,
-        naechster_monat_p=naechster_monat_p,
-        monat_belegung_p=monat_belegung_p,
-        cal_grid_p=cal_grid_p,
+        cal_rows_p=cal_rows_p,
+        monat_nav_str_p=monat_nav_str_p,
         monat_name_p=monat_name_p,
+        monat_name_p_short=monat_name_p.split(' ')[0][:3],
+        vorheriger_monat_p_str=vorheriger_monat_p.strftime('%Y-%m'),
+        naechster_monat_p_str=naechster_monat_p.strftime('%Y-%m'),
         ausgewaehlter_tag_park=ausgewaehlter_tag_park,
+        ausgewaehlter_tag_park_str=ausgewaehlter_tag_park_str,
+        ausgewaehlter_tag_park_day=ausgewaehlter_tag_park_day,
+        ausgewaehlter_tag_park_datum_str=ausgewaehlter_tag_park_datum_str,
         tag_name_park=tag_name_park,
         freie_plaetze_ausgewaehlt=freie_plaetze_ausgewaehlt,
     )
@@ -889,81 +938,4 @@ def admin_toggle_active(user_id):
 @app.route('/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
 @login_required
 def admin_toggle_admin(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('Du kannst deine eigene Admin-Rolle nicht aendern.', 'warning')
-        return redirect(url_for('admin'))
-
-    user.role = 'extern' if user.role == 'admin' else 'admin'
-    db.session.commit()
-    flash('Rolle von ' + user.name + ' (' + user.firma + ') wurde geaendert auf "' + user.role + '".', 'success')
-    return redirect(url_for('admin'))
-
-
-@app.route('/admin/user/<int:user_id>/passwort-zuruecksetzen', methods=['POST'])
-@login_required
-def admin_reset_password(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    neues_passwort = request.form.get('neues_passwort', '').strip()
-
-    if len(neues_passwort) < 6:
-        flash('Das neue Passwort muss mindestens 6 Zeichen lang sein.', 'danger')
-        return redirect(url_for('admin'))
-
-    user.set_password(neues_passwort)
-    db.session.commit()
-    flash('Passwort fuer ' + user.name + ' (' + user.firma + ') wurde zurueckgesetzt.', 'success')
-    return redirect(url_for('admin'))
-
-
-@app.route('/admin/user/<int:user_id>/loeschen', methods=['POST'])
-@login_required
-def admin_user_loeschen(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    if user.id == current_user.id:
-        flash('Du kannst dein eigenes Konto hier nicht loeschen.', 'warning')
-        return redirect(url_for('admin'))
-
-    Booking.query.filter_by(user_id=user.id).delete()
-    db.session.delete(user)
-    db.session.commit()
-    flash('Benutzer ' + user.name + ' (' + user.firma + ') wurde geloescht.', 'success')
-    return redirect(url_for('admin'))
-
-
-# ---------------------------------------------------------------------------
-# Routen: Auswertung
-# ---------------------------------------------------------------------------
-
-@app.route('/auswertung')
-@login_required
-def auswertung():
-    von_str = request.args.get('von')
-    bis_str = request.args.get('bis')
-
-    heute = date.today()
-    if von_str:
-        von = datetime.strptime(von_str, '%Y-%m-%d').date()
-    else:
-        von = heute.replace(day=1)
-
-    if bis_str:
-        bis = datetime.strptime(bis_str, '%Y-%m-%d').date()
-    else:
-        bis = heute
-
-    query = Booking.query.filter(Booking.datum >= von, Booking.datum <= bis)
-
-    if not current_user.is_admin():
-        query = query.filter(Booking.user_id == current_user.id)
-
-    buchungen = query.all
+   
