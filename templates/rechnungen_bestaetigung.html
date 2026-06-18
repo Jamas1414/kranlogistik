@@ -7,24 +7,22 @@
         <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-decoration-none" style="color:var(--kran-primary);">Start</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('baumanagement') }}" class="text-decoration-none" style="color:var(--kran-primary);">Baumanagement</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('rechnungen_liste') }}" class="text-decoration-none" style="color:var(--kran-primary);">Rechnungen</a></li>
-        <li class="breadcrumb-item active">Bestätigung</li>
+        <li class="breadcrumb-item active">Bestaetigung</li>
     </ol>
 </nav>
 
 <div class="row justify-content-center">
     <div class="col-12 col-md-7 col-lg-6">
 
-        <!-- Success header -->
         <div class="text-center mb-4">
             <div class="d-inline-flex align-items-center justify-content-center mb-3"
                  style="width:72px;height:72px;border-radius:50%;background:#e8f5ee;">
                 <i class="bi bi-check-lg" style="font-size:2.2rem;color:#2d9e6b;"></i>
             </div>
             <h4 class="fw-bold mb-1">Rechnung eingereicht!</h4>
-            <p class="text-muted mb-0">Ihre Rechnung wurde erfolgreich übermittelt.</p>
+            <p class="text-muted mb-0">Ihre Rechnung wurde erfolgreich uebermittelt.</p>
         </div>
 
-        <!-- Details card -->
         <div class="card shadow-sm mb-3">
             <div class="card-header py-3 px-4" style="background:white;">
                 <span class="fw-semibold"><i class="bi bi-receipt me-2" style="color:var(--kran-primary);"></i>Details</span>
@@ -34,7 +32,7 @@
                     <tbody>
                         <tr>
                             <td class="ps-4 py-3 text-muted small" style="width:40%;">Firmenname</td>
-                            <td class="py-3 fw-semibold">{{ rechnung.firmenname or '—' }}</td>
+                            <td class="py-3 fw-semibold">{{ rechnung.firmenname or '-' }}</td>
                         </tr>
                         {% if rechnung.bkp_nummer %}
                         <tr>
@@ -55,4 +53,86 @@
                                       style="background:{% if rechnung.rechnungstyp == 'Schlussrechnung' %}#d6e8f5;color:#1a4f72{% elif rechnung.rechnungstyp == 'Akonto' %}#e8e0f5;color:#4a3080{% else %}#d4ede2;color:#2d6a4a{% endif %};">
                                     {{ rechnung.rechnungstyp }}
                                 </span>
-     
+                            </td>
+                        </tr>
+                        {% if rechnung.dateiname_neu or rechnung.dateiname %}
+                        <tr>
+                            <td class="ps-4 py-3 text-muted small">Datei</td>
+                            <td class="py-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-file-earmark-pdf text-danger"></i>
+                                    <span class="small fw-semibold" style="word-break:break-all;">
+                                        {{ rechnung.dateiname_neu or rechnung.dateiname }}
+                                    </span>
+                                </div>
+                                {% if rechnung.dateiname and rechnung.dateiname_neu and rechnung.dateiname != rechnung.dateiname_neu %}
+                                <div class="small text-muted mt-1">
+                                    Umbenannt von: {{ rechnung.dateiname }}
+                                </div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td class="ps-4 py-3 text-muted small">Eingereicht am</td>
+                            <td class="py-3 small">{{ rechnung.created_at.strftime('%d.%m.%Y %H:%M') }} Uhr</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mb-3">
+            {% if rechnung.datei_pfad %}
+            <a href="{{ url_for('rechnungen_download', rechnung_id=rechnung.id) }}"
+               class="btn py-2 fw-semibold" id="btn-download"
+               style="background:var(--kran-primary);color:#fff;border-radius:10px;">
+                <i class="bi bi-download me-2"></i>{{ rechnung.dateiname_neu or rechnung.dateiname or 'Datei herunterladen' }}
+            </a>
+            {% endif %}
+            {% if onedrive_url %}
+            <a href="{{ onedrive_url }}" target="_blank" rel="noopener"
+               class="btn py-2 fw-semibold" style="background:#0078d4;color:#fff;border-radius:10px;">
+                <i class="bi bi-cloud-upload me-2"></i>SharePoint oeffnen &amp; hochladen
+            </a>
+            {% endif %}
+        </div>
+
+        {% if rechnung.datei_pfad and onedrive_url %}
+        <div class="alert d-flex align-items-start gap-2 py-2 px-3 small mb-3"
+             style="background:#e8f4fd; border:1px solid #b8d8f5; color:#0c4a7a;">
+            <i class="bi bi-info-circle mt-1 flex-shrink-0"></i>
+            <div>
+                Die Datei wird automatisch heruntergeladen (umbenannt als <strong>{{ rechnung.dateiname_neu }}</strong>).
+                Bitte danach im SharePoint hochladen.
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="text-center">
+            <a href="{{ url_for('rechnungen_liste') }}" class="text-decoration-none small" style="color:var(--kran-muted);">
+                <i class="bi bi-arrow-left me-1"></i>Alle Rechnungen anzeigen
+            </a>
+        </div>
+
+    </div>
+</div>
+
+{% if rechnung.datei_pfad %}
+<script>
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        var link = document.getElementById('btn-download');
+        if (link) {
+            var a = document.createElement('a');
+            a.href = link.href;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    }, 800);
+});
+</script>
+{% endif %}
+
+{% endblock %}
