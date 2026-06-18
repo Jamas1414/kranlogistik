@@ -1,8 +1,10 @@
 import os
+import re
+import uuid
 import calendar as cal_module
 from datetime import datetime, date, time, timedelta
 
-from flask import Flask, render_template, redirect, url_for, request, flash, Response
+from flask import Flask, render_template, redirect, url_for, request, flash, Response, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, UserMixin, login_user, login_required,
@@ -82,10 +84,14 @@ class ParkTicket(db.Model):
 class Rechnung(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    auftragsnummer = db.Column(db.String(50), nullable=False)
-    bkp_nummer = db.Column(db.String(50), nullable=False)
+    firmenname = db.Column(db.String(120), nullable=True)   # required in form; nullable for DB compat
+    bkp_nummer = db.Column(db.String(50), nullable=True)
+    vertragsnummer = db.Column(db.String(50), nullable=True)
+    auftragsnummer = db.Column(db.String(50), nullable=True)  # kept for backward compat
     rechnungstyp = db.Column(db.String(30), nullable=False)
     dateiname = db.Column(db.String(255))
+    dateiname_neu = db.Column(db.String(255))
+    datei_pfad = db.Column(db.String(500))
     status = db.Column(db.String(20), default='eingereicht')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -228,6 +234,19 @@ def berechne_preis(buchungsart, start_zeit, end_zeit):
 def _ensure_db():
     if not getattr(app, '_db_initialized', False):
         db.create_all()
+        # Migrate existing rechnung table with new columns (safe: ignore if already exists)
+        for sql in [
+            'ALTER TABLE rechnung ADD COLUMN firmenname VARCHAR(120)',
+            'ALTER TABLE rechnung ADD COLUMN vertragsnummer VARCHAR(50)',
+            'ALTER TABLE rechnung ADD COLUMN dateiname_neu VARCHAR(255)',
+            'ALTER TABLE rechnung ADD COLUMN datei_pfad VARCHAR(500)',
+        ]:
+            try:
+                with db.engine.connect() as _conn:
+                    _conn.execute(db.text(sql))
+                    _conn.commit()
+            except Exception:
+                pass
         app._db_initialized = True
 
 
@@ -907,35 +926,4 @@ def api_parkplatz_check():
 
 def admin_required():
     if not current_user.is_authenticated or not current_user.is_admin():
-        flash('Kein Zugriff. Diese Seite ist nur fuer Administratoren.', 'danger')
-        return False
-    return True
-
-
-@app.route('/admin')
-@login_required
-def admin():
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    users = User.query.order_by(User.created_at).all()
-    return render_template('admin.html', users=users)
-
-
-@app.route('/admin/user/<int:user_id>/toggle-active', methods=['POST'])
-@login_required
-def admin_toggle_active(user_id):
-    if not admin_required():
-        return redirect(url_for('kalender'))
-
-    user = User.query.get_or_404(user_id)
-    user.active = not user.active
-    db.session.commit()
-    flash('Konto von ' + user.name + ' (' + user.firma + ') wurde ' + ('freigeschaltet' if user.active else 'gesperrt') + '.', 'success')
-    return redirect(url_for('admin'))
-
-
-@app.route('/admin/user/<int:user_id>/toggle-admin', methods=['POST'])
-@login_required
-def admin_toggle_admin(user_id):
-   
+        flash('Kein Zugriff.
