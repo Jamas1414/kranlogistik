@@ -107,23 +107,21 @@
                 <h6 class="mb-0 fw-semibold"><i class="bi bi-plus-circle me-2" style="color:var(--kran-primary);"></i>Slot buchen</h6>
             </div>
             <div class="card-body p-4">
-                <form method="POST" action="{{ url_for('kalender') }}" id="buchung-form">
+                <form method="POST" action="{{ url_for('buchen') }}" id="buchung-form">
                     <input type="hidden" name="datum" value="{{ ausgewaehlter_tag_datum_str }}">
-                    <input type="hidden" name="von" id="inp-von" value="">
-                    <input type="hidden" name="bis" id="inp-bis" value="">
 
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="form-label fw-semibold small text-muted text-uppercase" style="letter-spacing:.05em;">Von</label>
-                            <select class="form-select" name="von_manual" id="sel-von">
+                            <select class="form-select" name="start" id="sel-von">
                                 {% for h in range(slot_start_hour, slot_end_hour) %}
                                 <option value="{{ '%02d:00'|format(h) }}">{{ '%02d:00'|format(h) }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label fw-semibold small text-muted text-uppercase" style="letter-spacing:.05em;">Bis</label>
-                            <select class="form-select" name="bis_manual" id="sel-bis">
+                            <label class="form-label fw-semibold small text-muted text-uppercase" style="letter-spacing:.05em;">Bis (nur Individuell)</label>
+                            <select class="form-select" name="end" id="sel-bis">
                                 {% for h in range(slot_start_hour+1, slot_end_hour+1) %}
                                 <option value="{{ '%02d:00'|format(h) }}">{{ '%02d:00'|format(h) }}</option>
                                 {% endfor %}
@@ -143,7 +141,7 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted text-uppercase" style="letter-spacing:.05em;">Beschreibung <span class="fw-normal">(optional)</span></label>
-                        <input type="text" class="form-control" name="beschreibung" placeholder="z.B. Material Etage 3">
+                        <input type="text" class="form-control" name="bemerkung" placeholder="z.B. Material Etage 3">
                     </div>
 
                     <div id="preis-preview" class="alert py-2 px-3 small mb-3" style="background:#f0f6ff; border:1px solid #c8dff7; color:#1a4a8a; display:none;">
@@ -206,8 +204,6 @@ var buchungsarten = {{ buchungsarten|tojson }};
 var stundensatz = {{ stundensatz }};
 
 function slotAuswaehlen(von, bis, dauerH) {
-    document.getElementById('inp-von').value = von;
-    document.getElementById('inp-bis').value = bis;
     var selVon = document.getElementById('sel-von');
     var selBis = document.getElementById('sel-bis');
     for (var i = 0; i < selVon.options.length; i++) {
@@ -239,16 +235,8 @@ function berechnePreis() {
 document.addEventListener('DOMContentLoaded', function() {
     var selVon = document.getElementById('sel-von');
     var selBis = document.getElementById('sel-bis');
-    if (selVon) selVon.addEventListener('change', function() {
-        document.getElementById('inp-von').value = selVon.value;
-        berechnePreis();
-    });
-    if (selBis) selBis.addEventListener('change', function() {
-        document.getElementById('inp-bis').value = selBis.value;
-        berechnePreis();
-    });
-    if (selVon && selVon.value) document.getElementById('inp-von').value = selVon.value;
-    if (selBis && selBis.value) document.getElementById('inp-bis').value = selBis.value;
+    if (selVon) selVon.addEventListener('change', berechnePreis);
+    if (selBis) selBis.addEventListener('change', berechnePreis);
 });
 </script>
 
